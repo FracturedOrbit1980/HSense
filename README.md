@@ -74,6 +74,17 @@ Duty in `duty_rate_general` is the **General** column of Schedule 1 Part 1 dated
 
 On that schedule, 3214.10, 3214.90, 3403.99.90, and 3506.10 are all **Free**. A sealing compound is therefore not reported at 10%, and it is reported at 3214.10.00 rather than the residual 3214.90.00, because the subheading text names mastics and caulking compounds.
 
+## Run it in a browser
+
+GitHub stores the source. It does not host the classifier. On your computer:
+
+```bash
+pip install -r requirements.txt
+python web.py
+```
+
+Then open [HSense](http://127.0.0.1:43123). Paste a line description or upload a PDF or image. The page returns the same JSON fields as the CLI, and you can download JSON or CSV.
+
 ## Commands
 
 ```bash
