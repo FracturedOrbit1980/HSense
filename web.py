@@ -158,9 +158,9 @@ PAGE = """<!DOCTYPE html>
   <div class="brand"><strong>HSENSE</strong><span>Schedule 1 · 28 August 2026</span></div>
   <h1>Check the description column.</h1>
   <p class="lede">{{ framework }}, {{ schedule }}. Lines under Description are classified to an 8-digit line, and a handwritten code is verified against that line.</p>
-  <form method="post" enctype="multipart/form-data">
+  <form method="post" enctype="multipart/form-data" autocomplete="off">
     <label class="field" for="description">Or paste the lines under Description</label>
-    <textarea id="description" name="description" placeholder="Sealing compound - TIN&#10;Anti Seize Compound - 500g&#10;PVA wood adhesive - 750g">{{ description }}</textarea>
+    <textarea id="description" name="description" autocomplete="off" placeholder="Sealing compound - TIN&#10;Anti Seize Compound - 500g&#10;PVA wood adhesive - 750g">{{ description }}</textarea>
     <div id="local-preview"><img alt="Selected document"><p></p></div>
     <div class="row">
       <label class="drop">
@@ -287,6 +287,19 @@ def _clear_preview() -> None:
         PREVIEW_PATH.unlink()
 
 
+def _reset_session() -> None:
+    """Drop the last invoice, pasted lines, and preview when the page is opened."""
+    global _last_rows, _last_source
+    _last_rows = []
+    _last_source = ""
+    _clear_preview()
+
+
+def _no_store(response: Response) -> Response:
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 def _view_context(**extra):
     rows = extra.get("rows", _last_rows)
     flagged = sum(1 for row in rows if row.get("flag") in {"incorrect", "critical"})
@@ -356,7 +369,8 @@ def _classify_upload(upload) -> tuple[list[dict], str]:
 
 @app.get("/")
 def index():
-    return render_template_string(PAGE, **_view_context())
+    _reset_session()
+    return _no_store(app.make_response(render_template_string(PAGE, **_view_context())))
 
 
 @app.get("/preview")
@@ -391,7 +405,7 @@ def classify():
         error = str(exc)
     _last_rows = rows
     _last_source = source
-    return render_template_string(
+    return _no_store(app.make_response(render_template_string(
         PAGE,
         **_view_context(
             rows=rows,
@@ -401,7 +415,7 @@ def classify():
             quantity=quantity,
             document_name=source,
         ),
-    )
+    )))
 
 
 @app.get("/export.pdf")
