@@ -1,3 +1,13 @@
+---
+title: HSense
+emoji: 📄
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # HS document intake and SARS tariff classification
 
 This tool reads a commercial invoice from a digital PDF, a scanned PDF, or a photograph and classifies each product line to an 8-digit South African tariff code. Evaluation, verification, and correction use the World Customs Organization Harmonized System and its local implementation, the SARS Tariff Book (Schedule 1 Part 1 of the Customs and Excise Act).
