@@ -119,26 +119,8 @@ PAGE = """<!DOCTYPE html>
     border: 1px dashed #8ea4c4; border-radius: 999px; color: var(--ink); cursor: pointer; background: white;
   }
   .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-  .drop span, button.camera span { display: block; line-height: 1.15; }
-  .drop small, button.camera small { display: block; line-height: 1.15; font-size: 0.75rem; }
-  .drop small { color: var(--muted); }
-  button.camera {
-    margin-left: 0;
-    flex-direction: column;
-    gap: 2px;
-    min-height: 52px;
-    padding: 8px 18px;
-    color: white;
-    background: #033591;
-    box-shadow: 0 4px 0 #022669, 0 10px 16px rgba(2, 38, 105, 0.25);
-  }
-  button.camera small { color: rgba(255, 255, 255, 0.82); font-weight: 500; }
-  #camera-panel { margin-top: 12px; background: #022669; border-radius: 16px; padding: 10px; }
-  #camera-panel[hidden] { display: none; }
-  #camera-video { width: 100%; max-height: 62vh; object-fit: cover; border-radius: 12px; background: #000; display: block; }
-  .camera-actions { display: flex; gap: 8px; margin-top: 10px; }
-  .camera-actions button { margin-left: 0; flex: 1; justify-content: center; }
-  #camera-close { background: transparent; color: white; box-shadow: none; border: 1px solid rgba(255, 255, 255, 0.45); }
+  .drop span { display: block; line-height: 1.15; }
+  .drop small { display: block; line-height: 1.15; font-size: 0.75rem; color: var(--muted); }
   button, .pdf {
     border: 0; border-radius: 999px; min-height: 46px; padding: 0 20px;
     font: inherit; font-weight: 600; line-height: 1.15; text-align: center;
@@ -223,7 +205,6 @@ PAGE = """<!DOCTYPE html>
     button, .drop { margin-left: 0; width: 100%; justify-content: center; }
     .row button[type="submit"], .author-row .pdf { margin-left: 0; }
     .bar { align-items: flex-start; flex-direction: column; }
-    .camera-actions button { width: auto; }
     .plate img { width: 150px; }
   }
 </style>
@@ -253,18 +234,9 @@ PAGE = """<!DOCTYPE html>
         <span>Upload invoice</span>
         <small>PDF or image</small>
       </label>
-      <button type="button" class="camera" id="open-camera"><span>Take photo</span><small>Phone camera</small></button>
-      <input id="camera-input" type="file" name="camera" accept="image/*" capture="environment" hidden>
       <button type="submit">Assign HS codes</button>
     </div>
-    <div id="camera-panel" hidden>
-      <video id="camera-video" autoplay playsinline muted></video>
-      <div class="camera-actions">
-        <button type="button" id="camera-close">Close</button>
-        <button type="button" id="camera-shutter">Use this photo</button>
-      </div>
-    </div>
-    <p class="hint">Take a photo with the phone camera, or upload a file. A handwritten " repeats the code above.</p>
+    <p class="hint">Upload a PDF or image. A handwritten " repeats the code above.</p>
   </form>
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
   {% if rows or preview %}
@@ -326,16 +298,6 @@ PAGE = """<!DOCTYPE html>
   const localPreview = document.getElementById("local-preview");
   const localImage = localPreview.querySelector("img");
   const localCaption = localPreview.querySelector("p");
-  const classifyForm = document.getElementById("classify-form");
-  const cameraInput = document.getElementById("camera-input");
-  const openCamera = document.getElementById("open-camera");
-  const cameraPanel = document.getElementById("camera-panel");
-  const cameraVideo = document.getElementById("camera-video");
-  const cameraShutter = document.getElementById("camera-shutter");
-  const cameraClose = document.getElementById("camera-close");
-  let cameraStream = null;
-  let useNativeCamera = !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-
   function showPreview(file) {
     if (!file) {
       localPreview.classList.remove("visible");
@@ -353,67 +315,11 @@ PAGE = """<!DOCTYPE html>
     localPreview.classList.add("visible");
   }
 
-  function stopCamera() {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((track) => track.stop());
-      cameraStream = null;
-    }
-    if (cameraVideo) cameraVideo.srcObject = null;
-    if (cameraPanel) cameraPanel.hidden = true;
-  }
-
   if (fileInput && fileLabel) {
     fileInput.addEventListener("change", () => {
       const file = fileInput.files && fileInput.files[0];
       fileLabel.textContent = file ? file.name : "PDF or image";
       showPreview(file);
-    });
-  }
-
-  if (openCamera && cameraInput) {
-    openCamera.addEventListener("click", async () => {
-      if (useNativeCamera) {
-        cameraInput.click();
-        return;
-      }
-      try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: { facingMode: { ideal: "environment" } },
-        });
-        cameraVideo.srcObject = cameraStream;
-        cameraPanel.hidden = false;
-      } catch (error) {
-        useNativeCamera = true;
-        cameraInput.click();
-      }
-    });
-    cameraInput.addEventListener("change", () => {
-      const file = cameraInput.files && cameraInput.files[0];
-      if (!file) return;
-      showPreview(file);
-      classifyForm.requestSubmit();
-    });
-  }
-
-  if (cameraClose) cameraClose.addEventListener("click", stopCamera);
-  if (cameraShutter) {
-    cameraShutter.addEventListener("click", () => {
-      if (!cameraVideo.videoWidth) return;
-      const canvas = document.createElement("canvas");
-      canvas.width = cameraVideo.videoWidth;
-      canvas.height = cameraVideo.videoHeight;
-      canvas.getContext("2d").drawImage(cameraVideo, 0, 0);
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const photo = new File([blob], "camera.jpg", { type: "image/jpeg" });
-        const transfer = new DataTransfer();
-        transfer.items.add(photo);
-        cameraInput.files = transfer.files;
-        stopCamera();
-        showPreview(photo);
-        classifyForm.requestSubmit();
-      }, "image/jpeg", 0.92);
     });
   }
 </script>
@@ -467,7 +373,6 @@ def _reset_session() -> None:
 
 def _no_store(response: Response) -> Response:
     response.headers["Cache-Control"] = "no-store"
-    response.headers["Permissions-Policy"] = "camera=*"
     return response
 
 
@@ -520,11 +425,7 @@ def _classify_description(description: str, part_number: str, quantity: str) -> 
 
 
 def _chosen_upload():
-    """A phone photo is sent as `camera`. A chosen file is sent as `document`."""
-    camera = request.files.get("camera")
     document = request.files.get("document")
-    if camera is not None and camera.filename:
-        return camera
     if document is not None and document.filename:
         return document
     return None

@@ -21,7 +21,7 @@ def test_opening_the_page_clears_the_previous_classification():
     assert exported.data.strip() == b"[]"
 
 
-def test_phone_camera_photo_is_accepted_for_analysis():
+def test_upload_has_no_camera_button():
     from io import BytesIO
 
     from PIL import Image
@@ -31,12 +31,12 @@ def test_phone_camera_photo_is_accepted_for_analysis():
     client = app.test_client()
     response = client.post(
         "/",
-        data={"camera": (BytesIO(buffer.getvalue()), "camera.jpg")},
+        data={"document": (BytesIO(buffer.getvalue()), "invoice.jpg")},
         content_type="multipart/form-data",
     )
     assert response.status_code == 200
-    assert b"choose a file" not in response.data
-    assert b"Take photo" in response.data
+    assert b"Take photo" not in response.data
+    assert b"Upload invoice" in response.data
 
 
 def test_pdf_requires_an_authoriser_and_keeps_an_amended_code():
