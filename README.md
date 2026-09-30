@@ -83,7 +83,7 @@ pip install -r requirements.txt
 python web.py
 ```
 
-Then open [HSense](http://127.0.0.1:43123). Upload an invoice or paste text. If the page has a Description header, only the lines under that header are classified. **Download PDF** writes Header, Description, and HS code.
+Then open [HSense](http://127.0.0.1:43123). Upload an invoice or paste text. Only the lines under Description are classified. A handwritten `"` means the same HS code as the line above, and the result uses that mark when a code repeats. **Download PDF** writes Header, Description, and HS code.
 
 ## Commands
 

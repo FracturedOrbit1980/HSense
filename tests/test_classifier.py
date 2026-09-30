@@ -1,6 +1,7 @@
 from data.tariff_db import TariffDB
-from engine.classifier import WCOClassifier
+from engine.classifier import WCOClassifier, classify_extracted_lines
 from engine.keyword_rules import parse_mass_kg
+from parsers.line_items import LineItem
 
 
 def setup_module():
@@ -92,6 +93,37 @@ def test_portland_cement_and_engine_oil_and_fastener():
     screw = CLASSIFIER.classify("Hexagon head screw, stainless steel")
     assert screw.hs_code == "7318.15.37"
     assert screw.duty_rate_general == "10%"
+
+
+def test_leonardo_lines_and_ditto_display():
+    seal = CLASSIFIER.classify("Pro Seal - TIN")
+    assert seal.hs_code == "3214.10.00"
+    inhibitor = CLASSIFIER.classify("Corrosion Inhibitor - 500ML")
+    assert inhibitor.hs_code == "3811.90.00"
+    pad = CLASSIFIER.classify("Scotch Brite")
+    assert pad.hs_code == "6805.30.00"
+    fluid = CLASSIFIER.classify("Nyco Hydraulic Fluid - LT")
+    assert fluid.hs_code.startswith("2710")
+    glue = CLASSIFIER.classify("Loctite - 50Ml")
+    assert glue.hs_code == "3506.10.00"
+    film = CLASSIFIER.classify("Solidfilm Lubricant - TIN")
+    assert film.hs_code == "3403.99.90"
+
+    rows = classify_extracted_lines(
+        CLASSIFIER,
+        [
+            LineItem("CS1900", "Sealing compound - TIN", 1, "a", noted_code="3214.90.00"),
+            LineItem("AC-730", "Pro Seal - TIN", 1, "b", noted_code="3214.90.00", same_as_above=True),
+            LineItem("X", "Acrylic Adhesive - 40ML", 1, "c"),
+        ],
+        "invoice.jpg",
+    )
+    assert rows[0]["hs_code"] == "3214.90.00"
+    assert rows[0]["hs_shown"] == "3214.90.00"
+    assert rows[1]["hs_shown"] == '"'
+    assert rows[1]["hs_code"] == "3214.90.00"
+    assert rows[2]["hs_code"] == "3506.10.00"
+    assert rows[2]["hs_shown"] == "3506.10.00"
 
 
 def test_common_goods_follow_heading_terms():

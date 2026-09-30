@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from data.tariff_db import TariffDB
-from engine.classifier import PUBLIC_FIELDS, WCOClassifier
+from engine.classifier import PUBLIC_FIELDS, WCOClassifier, classify_extracted_lines
 from parsers.line_items import _number
 from parsers.universal_extractor import extract_file, iter_inputs
 
@@ -117,14 +117,10 @@ def main(argv: list[str] | None = None) -> int:
             )
             for warning in extraction.warnings:
                 print(f"  warning: {warning}", file=sys.stderr)
-            for item in extraction.lines:
-                result = classifier.classify(
-                    item.description,
-                    part_number=item.part_number,
-                    quantity=item.quantity,
-                    source_file=extraction.source_file,
-                )
-                rows.append(result.as_dict(line_number))
+            classified = classify_extracted_lines(classifier, extraction.lines, extraction.source_file)
+            for row in classified:
+                row["line_number"] = line_number
+                rows.append(row)
                 line_number += 1
 
     _emit(rows, args.format, args.output)

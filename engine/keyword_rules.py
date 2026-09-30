@@ -142,15 +142,46 @@ def match_rules(description: str) -> RuleHit | None:
             ),
         )
 
+    if re.search(
+        r"\bcorrosion inhibitors?\b|\btectyl\b|\bcorban\b|\bardrox\s*av\b",
+        text,
+    ):
+        return RuleHit(
+            "corrosion_inhibitor_3811",
+            "3811",
+            "3811.90.00",
+            _duty(
+                "Classified under {hs_code} as an anti-corrosive preparation. "
+                "GRI 1: heading 38.11 covers anti-corrosive preparations and other "
+                "prepared additives for mineral oils or for other liquids used for "
+                "the same purposes. The description is not an anti-knock preparation "
+                "or an additive confined to lubricating oils, so residual subheading "
+                "3811.90 applies."
+            ),
+        )
+
+    if re.search(r"\bscotch\s*brite\b|\babrasive pads?\b|\bscouring pads?\b", text):
+        return RuleHit(
+            "abrasive_6805",
+            "6805",
+            "6805.30.00",
+            _duty(
+                "Classified under {hs_code} as abrasive powder or grain on a base. "
+                "GRI 1: heading 68.05 covers natural or artificial abrasive on a base "
+                "of textile, paper or other materials. A nylon scouring pad is on a "
+                "base of other materials, so subheading 6805.30 applies."
+            ),
+        )
+
     if re.search(r"greaseproof", text) is None and re.search(
         r"\banti[-\s]?seize\b|\bcopper\s*slip\b|"
         r"\bmoly(?:bdenum)?\s+(?:paste|grease)\b|"
         r"\bthread lubricants?\b|\bfriction reduc(?:er|ing|tion)\b|"
         r"\bcutting[-\s]?oils?\b|\blithium greases?\b|\bbearing greases?\b|"
-        r"\b(?:lubricating|multipurpose)\s+greases?\b|\bgreases?\b|"
+        r"\b(?:lubricating|multipurpose)\s+greases?\b|\bgreases?\b|\blubricants?\b|"
         r"\banti[-\s]?rust\b|\brust[-\s]?prevent",
         text,
-    ):
+    ) and not re.search(r"\b(?:gearbox|engine|hydraulic)\b", text):
         if re.search(r"\banti[-\s]?rust\b|\brust[-\s]?prevent", text) and re.search(
             r"\bpaint|enamel|lacquer|primer\b", text
         ):
@@ -181,7 +212,7 @@ def match_rules(description: str) -> RuleHit | None:
             )
 
     if re.search(
-        r"\b(?:engine|motor|gear|crankcase|hydraulic)\s+oils?\b",
+        r"\b(?:engine|motor|gear|gearbox|gear\s*box|crankcase|hydraulic)\s+(?:oils?|fluids?)\b",
         text,
     ) and not re.search(r"cutting[-\s]?oil", text):
         return RuleHit(
@@ -214,7 +245,7 @@ def match_rules(description: str) -> RuleHit | None:
     if re.search(
         r"\b(?:sealants?|sealing compounds?|caulks?|caulking(?:\s+compounds?)?|"
         r"mastics?|putties|putty|glaziers?'?\s+putty|resin cements?|"
-        r"painters?'?\s+fillings?|silicone sealants?)\b",
+        r"painters?'?\s+fillings?|silicone sealants?|pro\s*seals?)\b",
         text,
     ):
         prefer = _prefer_3214(description)
@@ -240,7 +271,7 @@ def match_rules(description: str) -> RuleHit | None:
 
     if re.search(
         r"\b(?:glues?|adhesives?|superglue|super glue|cyanoacrylates?|"
-        r"wood glues?|contact adhesives?)\b|\bpva\b",
+        r"wood glues?|contact adhesives?|loctite)\b|\bpva\b",
         text,
     ):
         prefer = _prefer_3506(description)

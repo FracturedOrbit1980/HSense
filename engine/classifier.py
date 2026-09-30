@@ -259,3 +259,55 @@ class WCOClassifier:
             f"{format_heading(line.heading)} covers: {excerpt}.{specific} "
             f"General duty: {line.duty_general} (SARS Schedule 1 Part 1, {self.db.schedule_date})."
         )
+
+
+def classify_extracted_lines(classifier: WCOClassifier, items, source_file: str) -> list[dict]:
+    """Classify invoice rows. A quote mark repeats the HS code from the line above."""
+    rows: list[dict] = []
+    previous: str | None = None
+    for index, item in enumerate(items, start=1):
+        result = _from_handwriting(classifier, item, source_file) or classifier.classify(
+            item.description,
+            part_number=item.part_number,
+            quantity=item.quantity,
+            source_file=source_file,
+        )
+        row = result.as_dict(index)
+        code = row.get("hs_code")
+        repeated = bool(getattr(item, "same_as_above", False) or (code and previous and code == previous))
+        row["hs_shown"] = '"' if repeated and code else (code or "")
+        if code:
+            previous = code
+        rows.append(row)
+    return rows
+
+
+def _from_handwriting(classifier: WCOClassifier, item, source_file: str) -> Classification | None:
+    noted = getattr(item, "noted_code", None)
+    if not noted:
+        return None
+    line = classifier.db.get(noted)
+    if line is None:
+        return None
+    if getattr(item, "same_as_above", False):
+        reason = (
+            f'The invoice mark " means the same HS code as the line above, '
+            f"so {line.hs_code} is carried forward. General duty: {line.duty_general} "
+            f"(SARS Schedule 1 Part 1, {classifier.db.schedule_date})."
+        )
+    else:
+        reason = (
+            f"Handwritten HS code {line.hs_code} on the invoice. General duty: "
+            f"{line.duty_general} (SARS Schedule 1 Part 1, {classifier.db.schedule_date})."
+        )
+    return Classification(
+        description=item.description,
+        hs_code=line.hs_code,
+        duty_rate_general=line.duty_general,
+        wco_reasoning=reason,
+        part_number=item.part_number,
+        quantity=item.quantity,
+        source_file=source_file,
+        score=100.0,
+        rule_id="handwritten",
+    )

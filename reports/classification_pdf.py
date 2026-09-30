@@ -58,7 +58,7 @@ def classification_pdf(
         table_rows.append([
             Paragraph(escape(str(row.get("header") or "")), cell),
             Paragraph(escape(str(row.get("description") or "")), cell),
-            Paragraph(escape(str(row.get("hs_code") or "")), cell),
+            Paragraph(escape(str(row.get("hs_shown") or row.get("hs_code") or "")), cell),
         ])
     if len(table_rows) == 1:
         table_rows.append([

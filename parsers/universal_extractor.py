@@ -100,6 +100,8 @@ def _extract_image(path: Path) -> Extraction:
 
 
 def _ocr_page(image) -> str:
+    if getattr(image, "width", 0) and image.width < 1400:
+        image = image.resize((image.width * 2, image.height * 2))
     if vision_enabled():
         transcript = transcribe_image(image)
         if transcript and _enough_text(transcript):

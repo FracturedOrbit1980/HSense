@@ -84,6 +84,54 @@ def test_only_the_description_column_below_its_header():
     assert items[0].quantity == 10
 
 
+LEONARDO = """
+LEONARDO SOUTH AFRICA (PTY) LTD
+COMMERCIAL INVOICE JDK27082026
+Part nr          Description                         Serial Nr   Qty
+CS1900           Sealing compound - TIN              NA          1  3214.90
+AC-730           Pro Seal - TIN                      NA          1  "
+91V736           Sealant - TUBE                      NA          1  "
+CB200-40         Acrylic Adhesive - 40ML             NA          1  3506.10
+"""
+
+
+def test_serial_column_and_ditto_marks():
+    items = parse_document_text(LEONARDO)
+    assert [item.description for item in items] == [
+        "Sealing compound - TIN",
+        "Pro Seal - TIN",
+        "Sealant - TUBE",
+        "Acrylic Adhesive - 40ML",
+    ]
+    assert items[0].part_number == "CS1900"
+    assert items[0].quantity == 1
+    assert items[0].noted_code == "3214.90.00"
+    assert items[1].same_as_above is True
+    assert items[1].noted_code == "3214.90.00"
+    assert items[2].noted_code == "3214.90.00"
+    assert items[3].noted_code == "3506.10.00"
+    assert "NA" not in items[0].description
+    assert not any("leonardo" in item.description.lower() for item in items)
+
+
+def test_na_serial_rows_are_kept_when_the_header_is_missing():
+    text = """
+    LEONARDO SOUTH AFRICA (PTY) LTD
+    Air Charter Botswana t/a KALAHARI AIR SERVICES
+    CS1900 Sealing compound - TIN NA 1
+    AC-730 Pro Seal - TIN NA 1 "
+    91V736 Sealant - TUBE NA 1 "
+    """
+    items = parse_document_text(text)
+    assert [item.description for item in items] == [
+        "Sealing compound - TIN",
+        "Pro Seal - TIN",
+        "Sealant - TUBE",
+    ]
+    assert items[1].same_as_above is True
+    assert not any("kalahari" in item.description.lower() for item in items)
+
+
 def test_lines_under_a_bare_description_header():
     text = """
     Warehouse note: engine oil 5L is in bay 3

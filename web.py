@@ -21,8 +21,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from data.tariff_db import TariffDB, format_heading
-from engine.classifier import PUBLIC_FIELDS, WCOClassifier
-from parsers.line_items import LineItem, _number, collect_descriptions
+from engine.classifier import PUBLIC_FIELDS, WCOClassifier, classify_extracted_lines
+from parsers.line_items import LineItem, _number, collect_descriptions, parse_document_text
 from parsers.universal_extractor import SUPPORTED_EXTENSIONS, extract_file
 from reports.classification_pdf import classification_pdf
 
@@ -131,7 +131,7 @@ PAGE = """<!DOCTYPE html>
       </label>
       <button type="submit">Assign HS codes</button>
     </div>
-    <p class="hint">Only rows below a Description header are read. A paste with no header is taken one line at a time.</p>
+    <p class="hint">Only rows below Description are read. A handwritten " means the same HS code as the line above.</p>
   </form>
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
   {% if rows %}
@@ -149,7 +149,7 @@ PAGE = """<!DOCTYPE html>
         {% for row in rows %}
         <tr>
           <td>{{ row.description }}</td>
-          <td><span class="code">{{ row.hs_code or "—" }}</span></td>
+          <td><span class="code" title="{{ row.hs_code or '' }}">{{ row.hs_shown or row.hs_code or "—" }}</span></td>
           <td class="duty">{{ row.duty_rate_general or "" }}</td>
         </tr>
         {% endfor %}
@@ -187,33 +187,24 @@ def _heading_label(hs_code: str | None) -> str:
     return f"{format_heading(line.heading)} {wording}".strip()
 
 
-def _row_from_item(item: LineItem, index: int, source_file: str) -> dict:
-    result = _classifier.classify(
-        item.description,
-        part_number=item.part_number,
-        quantity=item.quantity,
-        source_file=source_file,
-    )
-    row = result.as_dict(index)
-    row["header"] = _heading_label(row.get("hs_code"))
-    return row
+def _with_headers(rows: list[dict]) -> list[dict]:
+    for row in rows:
+        row["header"] = _heading_label(row.get("hs_code"))
+    return rows
 
 
 def _classify_description(description: str, part_number: str, quantity: str) -> list[dict]:
-    descriptions = collect_descriptions(description)
-    if not descriptions:
+    items = parse_document_text(description)
+    if not items:
+        items = [LineItem(None, text, None, text) for text in collect_descriptions(description)]
+    if not items:
         return []
-    single = len(descriptions) == 1
-    rows = []
-    for index, text in enumerate(descriptions, start=1):
-        item = LineItem(
-            (part_number.strip() or None) if single else None,
-            text,
-            _number(quantity) if single and quantity.strip() else None,
-            text,
-        )
-        rows.append(_row_from_item(item, index, "pasted descriptions"))
-    return rows
+    if len(items) == 1:
+        if part_number.strip():
+            items[0].part_number = part_number.strip()
+        if quantity.strip():
+            items[0].quantity = _number(quantity)
+    return _with_headers(classify_extracted_lines(_classifier, items, "pasted descriptions"))
 
 
 def _classify_upload(upload) -> tuple[list[dict], str]:
@@ -231,10 +222,7 @@ def _classify_upload(upload) -> tuple[list[dict], str]:
     if not ordered:
         detail = " ".join(extraction.warnings) or "No product descriptions were found in that file."
         raise ValueError(detail)
-    rows = [
-        _row_from_item(item, index, extraction.source_file)
-        for index, item in enumerate(ordered, start=1)
-    ]
+    rows = _with_headers(classify_extracted_lines(_classifier, ordered, extraction.source_file))
     return rows, extraction.source_file
 
 
