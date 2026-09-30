@@ -118,12 +118,22 @@ def test_leonardo_lines_and_ditto_display():
         ],
         "invoice.jpg",
     )
-    assert rows[0]["hs_code"] == "3214.90.00"
-    assert rows[0]["hs_shown"] == "3214.90.00"
-    assert rows[1]["hs_shown"] == '"'
-    assert rows[1]["hs_code"] == "3214.90.00"
+    assert rows[0]["hs_code"] == "3214.10.00"
+    assert rows[0]["handwritten"] == "3214.90.00"
+    assert rows[0]["flag"] == "incorrect"
+    assert rows[1]["handwritten_shown"] == '"'
+    assert rows[1]["handwritten"] == "3214.90.00"
+    assert rows[1]["flag"] == "incorrect"
+    assert rows[1]["hs_code"] == "3214.10.00"
     assert rows[2]["hs_code"] == "3506.10.00"
-    assert rows[2]["hs_shown"] == "3506.10.00"
+    assert rows[2]["flag"] == ""
+
+    matched = classify_extracted_lines(
+        CLASSIFIER,
+        [LineItem("CS1900", "Sealing compound - TIN", 1, "a", noted_code="3214.10.00")],
+        "invoice.jpg",
+    )
+    assert matched[0]["flag"] == "ok"
 
 
 def test_common_goods_follow_heading_terms():

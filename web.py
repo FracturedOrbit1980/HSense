@@ -12,9 +12,10 @@ import io
 import json
 import sys
 import tempfile
+import time
 from pathlib import Path
 
-from flask import Flask, Response, render_template_string, request
+from flask import Flask, Response, render_template_string, request, send_file
 
 ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
@@ -27,6 +28,7 @@ from parsers.universal_extractor import SUPPORTED_EXTENSIONS, extract_file
 from reports.classification_pdf import classification_pdf
 
 PORT = 43123
+PREVIEW_PATH = Path("/tmp/hsense-preview/page.png")
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024
 
@@ -64,14 +66,16 @@ PAGE = """<!DOCTYPE html>
       radial-gradient(900px 420px at 0% -10%, #fff 0%, transparent 55%),
       var(--bg);
   }
-  .wrap { max-width: 860px; margin: 0 auto; padding: 40px 20px 72px; }
-  .brand { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 36px; }
-  .brand strong { font-size: 0.95rem; letter-spacing: 0.16em; font-weight: 700; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 20px 64px; }
+  .brand { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+  .brand strong { font-size: 0.92rem; letter-spacing: 0.16em; font-weight: 700; }
   .brand span { color: var(--muted); font-size: 0.85rem; }
-  h1 { margin: 0 0 10px; font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.05; letter-spacing: -0.035em; font-weight: 650; }
-  .lede { margin: 0 0 28px; max-width: 36rem; color: var(--muted); font-size: 1.05rem; }
-  form, .results { background: var(--card); border: 1px solid var(--line); border-radius: 20px; }
-  form { padding: 18px; }
+  h1 { margin: 0 0 8px; font-size: clamp(1.7rem, 3vw, 2.3rem); line-height: 1.1; letter-spacing: -0.03em; font-weight: 650; }
+  .lede { margin: 0 0 18px; max-width: 40rem; color: var(--muted); font-size: 1rem; }
+  form, .results, .sheet { background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
+  form { padding: 16px; }
+  .workspace { display: grid; grid-template-columns: minmax(260px, 380px) minmax(0, 1fr); gap: 18px; align-items: start; margin-top: 18px; }
+  .workspace.solo { grid-template-columns: 1fr; }
   label.field { display: block; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
   textarea {
     width: 100%; min-height: 168px; resize: vertical; border: 0; border-radius: 14px;
@@ -105,11 +109,26 @@ PAGE = """<!DOCTYPE html>
   td.duty { color: var(--muted); white-space: nowrap; }
   .code {
     font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
-    background: var(--chip); color: var(--chip-ink); border-radius: 999px; padding: 4px 10px; font-size: 0.92rem;
+    background: var(--chip); color: var(--chip-ink); border-radius: 999px; padding: 4px 10px; font-size: 0.9rem; white-space: nowrap;
   }
+  .written { color: var(--muted); font-family: ui-monospace, Consolas, monospace; }
+  .written.bad { color: var(--danger); text-decoration: line-through; }
+  .flag {
+    display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 8px;
+    background: var(--danger-bg); color: var(--danger); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  tr.bad td { background: #fff8f6; }
   .quiet { margin: 0; padding: 4px 18px 16px; color: var(--muted); font-size: 0.88rem; }
   .quiet a { color: var(--accent-dark); }
-  @media (max-width: 640px) {
+  .sheet { padding: 12px; position: sticky; top: 16px; }
+  .sheet img, #local-preview img { width: 100%; height: auto; border-radius: 12px; display: block; background: #ece7df; }
+  .sheet figcaption, #local-preview p { margin: 8px 4px 0; color: var(--muted); font-size: 0.82rem; }
+  #local-preview { display: none; margin-top: 12px; }
+  #local-preview.visible { display: block; }
+  .table-wrap { overflow-x: auto; }
+  @media (max-width: 860px) {
+    .workspace { grid-template-columns: 1fr; }
+    .sheet { position: static; }
     button { margin-left: 0; width: 100%; justify-content: center; }
     .bar { align-items: flex-start; flex-direction: column; }
   }
@@ -118,11 +137,12 @@ PAGE = """<!DOCTYPE html>
 <body>
 <div class="wrap">
   <div class="brand"><strong>HSENSE</strong><span>Schedule 1 · 28 August 2026</span></div>
-  <h1>Codes for the description column.</h1>
-  <p class="lede">Upload an invoice or paste the lines under Description. Everything above that header is left alone. Each description gets an 8-digit HS code.</p>
+  <h1>Check the description column.</h1>
+  <p class="lede">Upload the invoice. Lines under Description are classified, and a handwritten code is flagged when it does not match.</p>
   <form method="post" enctype="multipart/form-data">
-    <label class="field" for="description">Under Description</label>
+    <label class="field" for="description">Or paste the lines under Description</label>
     <textarea id="description" name="description" placeholder="Sealing compound - TIN&#10;Anti Seize Compound - 500g&#10;PVA wood adhesive - 750g">{{ description }}</textarea>
+    <div id="local-preview"><img alt="Selected document"><p></p></div>
     <div class="row">
       <label class="drop">
         <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.bmp,.heic,.heif">
@@ -131,41 +151,72 @@ PAGE = """<!DOCTYPE html>
       </label>
       <button type="submit">Assign HS codes</button>
     </div>
-    <p class="hint">Only rows below Description are read. A handwritten " means the same HS code as the line above.</p>
+    <p class="hint">A handwritten " repeats the code above. That code is checked against the classification.</p>
   </form>
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
-  {% if rows %}
-  <section class="results">
-    <div class="bar">
-      <div>
-        <h2>{{ rows|length }} description{{ "s" if rows|length != 1 else "" }}</h2>
-        <p>Header, description, and HS code are in the PDF.</p>
+  {% if rows or preview %}
+  <div class="workspace{% if not preview %} solo{% endif %}">
+    {% if preview %}
+    <figure class="sheet">
+      <img src="/preview?t={{ preview_token }}" alt="Preview of {{ document_name or 'the uploaded document' }}">
+      <figcaption>Uploaded invoice</figcaption>
+    </figure>
+    {% endif %}
+    {% if rows %}
+    <section class="results">
+      <div class="bar">
+        <div>
+          <h2>{{ rows|length }} description{{ "s" if rows|length != 1 else "" }}</h2>
+          <p>{% if flagged %}{{ flagged }} handwritten code{{ "s" if flagged != 1 else "" }} to check.{% else %}Handwritten codes match, or none were read.{% endif %}</p>
+        </div>
+        <a class="pdf" href="/export.pdf">Download PDF</a>
       </div>
-      <a class="pdf" href="/export.pdf">Download PDF</a>
-    </div>
-    <table>
-      <thead><tr><th>Description</th><th>HS code</th><th>Duty</th></tr></thead>
-      <tbody>
-        {% for row in rows %}
-        <tr>
-          <td>{{ row.description }}</td>
-          <td><span class="code" title="{{ row.hs_code or '' }}">{{ row.hs_shown or row.hs_code or "—" }}</span></td>
-          <td class="duty">{{ row.duty_rate_general or "" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <p class="quiet"><a href="/export.json">JSON</a> · <a href="/export.csv">CSV</a></p>
-  </section>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Description</th><th>HS code</th><th>Handwritten</th><th></th><th>Duty</th></tr></thead>
+        <tbody>
+          {% for row in rows %}
+          <tr class="{{ 'bad' if row.flag == 'incorrect' else '' }}">
+            <td>{{ row.description }}</td>
+            <td><span class="code">{{ row.hs_code or "—" }}</span></td>
+            <td><span class="written {{ 'bad' if row.flag == 'incorrect' else '' }}" title="{{ row.flag_note or '' }}">{{ row.handwritten_shown or "—" }}</span></td>
+            <td>{% if row.flag == 'incorrect' %}<span class="flag">Incorrect</span>{% endif %}</td>
+            <td class="duty">{{ row.duty_rate_general or "" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <p class="quiet"><a href="/export.json">JSON</a> · <a href="/export.csv">CSV</a></p>
+    </section>
+    {% endif %}
+  </div>
   {% endif %}
 </div>
 <script>
   const fileInput = document.querySelector(".drop input");
   const fileLabel = document.querySelector(".drop small");
+  const localPreview = document.getElementById("local-preview");
+  const localImage = localPreview.querySelector("img");
+  const localCaption = localPreview.querySelector("p");
   if (fileInput && fileLabel) {
     fileInput.addEventListener("change", () => {
       const file = fileInput.files && fileInput.files[0];
       fileLabel.textContent = file ? file.name : "PDF or image";
+      if (!file) {
+        localPreview.classList.remove("visible");
+        return;
+      }
+      localCaption.textContent = file.name;
+      if (file.type.startsWith("image/")) {
+        localImage.src = URL.createObjectURL(file);
+        localImage.hidden = false;
+      } else {
+        localImage.removeAttribute("src");
+        localImage.hidden = true;
+        localCaption.textContent = file.name + " — preview appears after classification";
+      }
+      localPreview.classList.add("visible");
     });
   }
 </script>
@@ -175,6 +226,50 @@ PAGE = """<!DOCTYPE html>
 
 _last_rows: list[dict] = []
 _last_source = ""
+_preview_token = ""
+
+
+def _save_preview(path: Path) -> None:
+    global _preview_token
+    PREVIEW_PATH.parent.mkdir(parents=True, exist_ok=True)
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
+        import pymupdf
+
+        document = pymupdf.open(path)
+        page = document[0]
+        pixmap = page.get_pixmap(matrix=pymupdf.Matrix(1.6, 1.6), alpha=False)
+        pixmap.save(PREVIEW_PATH)
+        document.close()
+    else:
+        from PIL import Image
+
+        image = Image.open(path).convert("RGB")
+        image.thumbnail((1600, 2000))
+        image.save(PREVIEW_PATH, "PNG")
+    _preview_token = str(time.time())
+
+
+def _clear_preview() -> None:
+    global _preview_token
+    _preview_token = ""
+    if PREVIEW_PATH.exists():
+        PREVIEW_PATH.unlink()
+
+
+def _view_context(**extra):
+    rows = extra.get("rows", _last_rows)
+    flagged = sum(1 for row in rows if row.get("flag") == "incorrect")
+    extra.setdefault("rows", rows)
+    extra.setdefault("description", "")
+    extra.setdefault("part_number", "")
+    extra.setdefault("quantity", "")
+    extra.setdefault("error", None)
+    extra.setdefault("document_name", _last_source)
+    extra["preview"] = bool(_preview_token and PREVIEW_PATH.exists())
+    extra["preview_token"] = _preview_token
+    extra["flagged"] = flagged
+    return extra
 
 
 def _heading_label(hs_code: str | None) -> str:
@@ -214,6 +309,7 @@ def _classify_upload(upload) -> tuple[list[dict], str]:
     with tempfile.TemporaryDirectory() as folder:
         path = Path(folder) / Path(upload.filename).name
         upload.save(path)
+        _save_preview(path)
         extraction = extract_file(path)
     ordered = list(extraction.lines)
     if not ordered and extraction.text:
@@ -228,14 +324,14 @@ def _classify_upload(upload) -> tuple[list[dict], str]:
 
 @app.get("/")
 def index():
-    return render_template_string(
-        PAGE,
-        rows=_last_rows,
-        error=None,
-        description="",
-        part_number="",
-        quantity="",
-    )
+    return render_template_string(PAGE, **_view_context())
+
+
+@app.get("/preview")
+def preview():
+    if not PREVIEW_PATH.exists():
+        return Response(status=404)
+    return send_file(PREVIEW_PATH, mimetype="image/png", max_age=0)
 
 
 @app.post("/")
@@ -252,6 +348,7 @@ def classify():
         if upload and upload.filename:
             rows, source = _classify_upload(upload)
         elif description.strip():
+            _clear_preview()
             rows = _classify_description(description, part_number, quantity)
             source = "Pasted descriptions"
             if not rows:
@@ -264,11 +361,14 @@ def classify():
     _last_source = source
     return render_template_string(
         PAGE,
-        rows=rows,
-        error=error,
-        description=description,
-        part_number=part_number,
-        quantity=quantity,
+        **_view_context(
+            rows=rows,
+            error=error,
+            description=description,
+            part_number=part_number,
+            quantity=quantity,
+            document_name=source,
+        ),
     )
 
 

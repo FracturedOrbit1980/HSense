@@ -262,52 +262,43 @@ class WCOClassifier:
 
 
 def classify_extracted_lines(classifier: WCOClassifier, items, source_file: str) -> list[dict]:
-    """Classify invoice rows. A quote mark repeats the HS code from the line above."""
+    """Classify every description, then check a handwritten code against that result.
+
+    A quote mark still means the handwritten code from the line above. The code
+    shown for the line is the classification. The handwritten value is flagged
+    when it is not that code.
+    """
     rows: list[dict] = []
-    previous: str | None = None
     for index, item in enumerate(items, start=1):
-        result = _from_handwriting(classifier, item, source_file) or classifier.classify(
+        result = classifier.classify(
             item.description,
             part_number=item.part_number,
             quantity=item.quantity,
             source_file=source_file,
         )
         row = result.as_dict(index)
-        code = row.get("hs_code")
-        repeated = bool(getattr(item, "same_as_above", False) or (code and previous and code == previous))
-        row["hs_shown"] = '"' if repeated and code else (code or "")
-        if code:
-            previous = code
+        written = getattr(item, "noted_code", None) or None
+        ditto = bool(getattr(item, "same_as_above", False))
+        row["handwritten"] = written or ""
+        row["same_as_above"] = ditto
+        row["handwritten_shown"] = '"' if ditto and written else (written or "")
+        checked = row.get("hs_code") or ""
+        row["hs_shown"] = checked
+        if not written:
+            row["flag"] = ""
+            row["flag_note"] = ""
+        elif classifier.db.get(written) is None:
+            row["flag"] = "incorrect"
+            row["flag_note"] = f"Handwritten {written} is not a declarable code on this schedule."
+        elif written != checked:
+            row["flag"] = "incorrect"
+            carried = " The quote repeats the code from the line above." if ditto else ""
+            row["flag_note"] = f"Handwritten {written} does not match {checked}.{carried}"
+        else:
+            row["flag"] = "ok"
+            row["flag_note"] = "Handwritten code matches."
+        if row["flag"] == "incorrect":
+            note = row["flag_note"]
+            row["wco_reasoning"] = f"{note} {row['wco_reasoning']}"
         rows.append(row)
     return rows
-
-
-def _from_handwriting(classifier: WCOClassifier, item, source_file: str) -> Classification | None:
-    noted = getattr(item, "noted_code", None)
-    if not noted:
-        return None
-    line = classifier.db.get(noted)
-    if line is None:
-        return None
-    if getattr(item, "same_as_above", False):
-        reason = (
-            f'The invoice mark " means the same HS code as the line above, '
-            f"so {line.hs_code} is carried forward. General duty: {line.duty_general} "
-            f"(SARS Schedule 1 Part 1, {classifier.db.schedule_date})."
-        )
-    else:
-        reason = (
-            f"Handwritten HS code {line.hs_code} on the invoice. General duty: "
-            f"{line.duty_general} (SARS Schedule 1 Part 1, {classifier.db.schedule_date})."
-        )
-    return Classification(
-        description=item.description,
-        hs_code=line.hs_code,
-        duty_rate_general=line.duty_general,
-        wco_reasoning=reason,
-        part_number=item.part_number,
-        quantity=item.quantity,
-        source_file=source_file,
-        score=100.0,
-        rule_id="handwritten",
-    )

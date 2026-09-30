@@ -49,25 +49,31 @@ def classification_pdf(
     story.append(Paragraph(escape(f"{len(rows)} description{'s' if len(rows) != 1 else ''}"), sub))
     story.append(Spacer(1, 10))
 
-    table_rows = [[
+    written = any(row.get("handwritten") for row in rows)
+    header_cells = [
         Paragraph("Header", head),
         Paragraph("Description", head),
         Paragraph("HS code", head),
-    ]]
+    ]
+    if written:
+        header_cells.extend([Paragraph("Handwritten", head), Paragraph("Check", head)])
+    table_rows = [header_cells]
     for row in rows:
-        table_rows.append([
+        cells = [
             Paragraph(escape(str(row.get("header") or "")), cell),
             Paragraph(escape(str(row.get("description") or "")), cell),
-            Paragraph(escape(str(row.get("hs_shown") or row.get("hs_code") or "")), cell),
-        ])
+            Paragraph(escape(str(row.get("hs_code") or "")), cell),
+        ]
+        if written:
+            mark = "Incorrect" if row.get("flag") == "incorrect" else ""
+            cells.append(Paragraph(escape(str(row.get("handwritten_shown") or "")), cell))
+            cells.append(Paragraph(escape(mark), cell))
+        table_rows.append(cells)
     if len(table_rows) == 1:
-        table_rows.append([
-            Paragraph("", cell),
-            Paragraph("No descriptions were classified.", cell),
-            Paragraph("", cell),
-        ])
+        table_rows.append([Paragraph("", cell), Paragraph("No descriptions were classified.", cell), Paragraph("", cell)])
 
-    table = Table(table_rows, colWidths=[70 * mm, 78 * mm, 28 * mm], repeatRows=1)
+    widths = [52 * mm, 62 * mm, 28 * mm, 24 * mm, 22 * mm] if written else [70 * mm, 78 * mm, 28 * mm]
+    table = Table(table_rows, colWidths=widths, repeatRows=1)
     table.setStyle(
         TableStyle(
             [

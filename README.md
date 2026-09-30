@@ -83,7 +83,7 @@ pip install -r requirements.txt
 python web.py
 ```
 
-Then open [HSense](http://127.0.0.1:43123). Upload an invoice or paste text. Only the lines under Description are classified. A handwritten `"` means the same HS code as the line above, and the result uses that mark when a code repeats. **Download PDF** writes Header, Description, and HS code.
+Then open [HSense](http://127.0.0.1:43123). Upload an invoice or paste text. The document is shown beside the results. Only the lines under Description are classified. A handwritten code, including a `"` that repeats the line above, is checked against that classification and marked **Incorrect** when it differs. **Download PDF** includes the check.
 
 ## Commands
 
