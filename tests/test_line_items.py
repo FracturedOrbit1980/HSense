@@ -1,4 +1,4 @@
-from parsers.line_items import parse_document_text, parse_free_text_line
+from parsers.line_items import collect_descriptions, parse_document_text, parse_free_text_line
 
 
 INVOICE = """
@@ -46,3 +46,24 @@ def test_multiplied_quantity():
     assert item is not None
     assert item.quantity == 4
     assert item.description == "Engine oil 5L"
+
+
+def test_plain_list_keeps_every_description():
+    text = """
+    Sealing compound - TIN
+    Anti Seize Compound - 500g
+    Portland cement 50 kg bag
+    """
+    descriptions = collect_descriptions(text)
+    assert descriptions == [
+        "Sealing compound - TIN",
+        "Anti Seize Compound - 500g",
+        "Portland cement 50 kg bag",
+    ]
+
+
+def test_invoice_descriptions_skip_addresses_and_totals():
+    descriptions = [item.lower() for item in collect_descriptions(INVOICE)]
+    assert any("sealing compound" in item for item in descriptions)
+    assert any("anti seize" in item for item in descriptions)
+    assert not any("subtotal" in item or "acme" in item or "invoice" in item for item in descriptions)

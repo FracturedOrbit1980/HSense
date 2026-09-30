@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -61,7 +62,8 @@ class TariffDB:
             from data.build_tariff import DEFAULT_PDF, build_database
 
             build_database(DEFAULT_PDF, self.path)
-        self.conn = sqlite3.connect(self.path)
+        self.conn = sqlite3.connect(self.path, check_same_thread=False)
+        self._lock = threading.Lock()
         self.conn.row_factory = sqlite3.Row
         self.meta = {
             row["key"]: row["value"]
@@ -146,15 +148,16 @@ class TariffDB:
             return []
         query = " OR ".join(f'"{token}"' for token in tokens[:12])
         try:
-            rows = self.conn.execute(
-                """
-                SELECT hs_code FROM tariff_fts
-                WHERE tariff_fts MATCH ?
-                ORDER BY bm25(tariff_fts)
-                LIMIT ?
-                """,
-                (query, limit),
-            ).fetchall()
+            with self._lock:
+                rows = self.conn.execute(
+                    """
+                    SELECT hs_code FROM tariff_fts
+                    WHERE tariff_fts MATCH ?
+                    ORDER BY bm25(tariff_fts)
+                    LIMIT ?
+                    """,
+                    (query, limit),
+                ).fetchall()
         except sqlite3.OperationalError:
             return []
         found: list[TariffLine] = []

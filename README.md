@@ -83,7 +83,7 @@ pip install -r requirements.txt
 python web.py
 ```
 
-Then open [HSense](http://127.0.0.1:43123). Paste a line description or upload a PDF or image. The page returns the same JSON fields as the CLI, and you can download JSON or CSV.
+Then open [HSense](http://127.0.0.1:43123). Paste every product description, one per line, or upload a PDF or image. Each description is classified. **Download PDF** writes a table with three columns: Header (the tariff heading), Description, and HS code. JSON and CSV are still available.
 
 ## Commands
 
@@ -106,10 +106,11 @@ python main.py --rebuild-db --describe "Sealing compound - TIN"
 - `engine/keyword_rules.py` — the heading rules above
 - `engine/classifier.py` — GRI reasoning and 8-digit selection
 - `main.py` — CLI
+- `web.py` — browser form, and a PDF of header, description, and HS code
+- `reports/classification_pdf.py` — that PDF
 
 ## Source
 
 The tariff text is SARS Schedule No. 1 Part 1, ordinary customs duty, chapters 1 to 99, dated 28 August 2026, saved at `data/sources/schedule_1_part_1.pdf`. Chapter 77 is reserved and is not in the schedule. Declarable 6-digit subheadings that South Africa does not split further are stored as `XXXX.XX.00`.
 
 This is a classification aid. The reasoning cites the heading terms so a person can check the line before it is used on a declaration.
-# LUD-HS

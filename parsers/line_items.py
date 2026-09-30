@@ -39,6 +39,43 @@ class LineItem:
     page: int | None = None
 
 
+_LIST_MARK = re.compile(r"^(?:\d{1,3}[\.\)]\s+|[-*•]\s+)")
+
+
+def collect_descriptions(text: str) -> list[str]:
+    """Every goods description in pasted text or a document transcript.
+
+    Invoice rows are taken first. Any other line that still reads as a
+    product (and is not an address, total, or column heading) is kept too,
+    so a plain list of descriptions is classified line by line.
+    """
+    found: list[str] = []
+    known: set[str] = set()
+    for raw in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        item = parse_free_text_line(raw)
+        if item is not None:
+            _add_description(found, known, item.description)
+            continue
+        line = _LIST_MARK.sub("", " ".join(raw.split())).strip(" ;")
+        if len(line) < 3 or is_header_line(line) or _skip_line(line):
+            continue
+        if not _valid_description(line):
+            continue
+        _add_description(found, known, line)
+    return found
+
+
+def _add_description(found: list[str], known: set[str], description: str) -> None:
+    text = " ".join(description.split()).strip(" ;")
+    norm = _norm(text)
+    if not norm or not _valid_description(text):
+        return
+    if any(norm == existing or existing in norm or norm in existing for existing in known):
+        return
+    known.add(norm)
+    found.append(text)
+
+
 def parse_document_text(text: str, page: int | None = None) -> list[LineItem]:
     items: list[LineItem] = []
     seen: set[tuple[str, str]] = set()
