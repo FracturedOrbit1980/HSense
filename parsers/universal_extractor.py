@@ -154,11 +154,11 @@ def _read_digital_pdf(path: Path) -> tuple[str, list, str | None]:
 
 
 def _choose_lines(text: str, tables: list) -> list[LineItem]:
+    """Prefer the Description column of a table over loose text on the page."""
     from_tables = parse_tables(tables)
-    from_text = parse_document_text(text)
-    if len(from_text) > len(from_tables):
-        return from_text
-    return from_tables or from_text
+    if from_tables:
+        return from_tables
+    return parse_document_text(text)
 
 
 def _enough_text(text: str) -> bool:

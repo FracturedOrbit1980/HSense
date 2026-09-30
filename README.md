@@ -83,7 +83,7 @@ pip install -r requirements.txt
 python web.py
 ```
 
-Then open [HSense](http://127.0.0.1:43123). Paste every product description, one per line, or upload a PDF or image. Each description is classified. **Download PDF** writes a table with three columns: Header (the tariff heading), Description, and HS code. JSON and CSV are still available.
+Then open [HSense](http://127.0.0.1:43123). Upload an invoice or paste text. If the page has a Description header, only the lines under that header are classified. **Download PDF** writes Header, Description, and HS code.
 
 ## Commands
 

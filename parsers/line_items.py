@@ -28,6 +28,15 @@ SKIP_RE = re.compile(
     re.IGNORECASE,
 )
 HEADER_KEYS = ("description", "qty", "quantity", "part no", "part number", "sku")
+_DESCRIPTION_LABEL = re.compile(
+    r"\b(description|line description|goods description|item description)\b",
+    re.IGNORECASE,
+)
+_COLUMN_LABELS = (
+    ("part", re.compile(r"\b(part\s*(?:no\.?|number|#)?|sku|item\s*code|product\s*code)\b", re.IGNORECASE)),
+    ("description", re.compile(r"\b(description|goods|line\s*description)\b", re.IGNORECASE)),
+    ("quantity", re.compile(r"\b(qty|quantity)\b", re.IGNORECASE)),
+)
 
 
 @dataclass
@@ -43,19 +52,23 @@ _LIST_MARK = re.compile(r"^(?:\d{1,3}[\.\)]\s+|[-*•]\s+)")
 
 
 def collect_descriptions(text: str) -> list[str]:
-    """Every goods description in pasted text or a document transcript.
+    """Descriptions to classify.
 
-    Invoice rows are taken first. Any other line that still reads as a
-    product (and is not an address, total, or column heading) is kept too,
-    so a plain list of descriptions is classified line by line.
+    When the text has a Description column header, only the cells under that
+    header are returned. A paste with no header is treated as one description
+    per line.
     """
-    found: list[str] = []
-    known: set[str] = set()
-    for raw in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
-        item = parse_free_text_line(raw)
-        if item is not None:
+    under_header = rows_below_description_header(text)
+    if under_header is not None:
+        found: list[str] = []
+        known: set[str] = set()
+        for item in under_header:
             _add_description(found, known, item.description)
-            continue
+        return found
+
+    found = []
+    known = set()
+    for raw in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
         line = _LIST_MARK.sub("", " ".join(raw.split())).strip(" ;")
         if len(line) < 3 or is_header_line(line) or _skip_line(line):
             continue
@@ -63,6 +76,111 @@ def collect_descriptions(text: str) -> list[str]:
             continue
         _add_description(found, known, line)
     return found
+
+
+def rows_below_description_header(text: str) -> list[LineItem] | None:
+    """Product rows that sit under a Description column. None if no such header."""
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    header_index = None
+    for index, line in enumerate(lines):
+        if _is_description_header(line):
+            header_index = index
+            break
+    if header_index is None:
+        return None
+
+    spans = _column_spans(lines[header_index])
+    items: list[LineItem] = []
+    blank_run = 0
+    for raw in lines[header_index + 1 :]:
+        if not raw.strip():
+            blank_run += 1
+            if items and blank_run >= 2:
+                break
+            continue
+        blank_run = 0
+        if _skip_line(raw):
+            if items:
+                break
+            continue
+        if is_header_line(raw) or _is_description_header(raw):
+            continue
+        item = _item_under_header(raw, spans)
+        if item is not None:
+            items.append(item)
+    return items
+
+
+def _is_description_header(line: str) -> bool:
+    compact = " ".join(line.split())
+    if not compact or not _DESCRIPTION_LABEL.search(compact):
+        return False
+    if is_header_line(compact):
+        return True
+    return bool(
+        re.fullmatch(
+            r"(item |line |goods |product )?descriptions?",
+            compact,
+            re.IGNORECASE,
+        )
+    )
+
+
+def _column_spans(header: str) -> dict[str, int]:
+    found: list[tuple[int, str]] = []
+    for name, pattern in _COLUMN_LABELS:
+        match = pattern.search(header)
+        if match:
+            found.append((match.start(), name))
+    found.sort()
+    spans: dict[str, int] = {}
+    for index, (start, name) in enumerate(found):
+        if name in spans:
+            continue
+        spans[name] = start
+        if index + 1 < len(found):
+            spans[f"after_{name}"] = found[index + 1][0]
+    return spans
+
+
+def _item_under_header(raw: str, spans: dict[str, int]) -> LineItem | None:
+    aligned = _item_from_aligned_row(raw, spans)
+    if aligned is not None:
+        return aligned
+    parsed = parse_free_text_line(raw)
+    if parsed is not None:
+        return parsed
+    line = _LIST_MARK.sub("", " ".join(raw.split())).strip(" ;")
+    if len(line) < 3 or not _valid_description(line) or _skip_line(line) or is_header_line(line):
+        return None
+    return LineItem(None, line, None, raw)
+
+
+def _item_from_aligned_row(raw: str, spans: dict[str, int]) -> LineItem | None:
+    start = spans.get("description")
+    if start is None or len(raw) <= start:
+        return None
+    if start > 0 and raw[start - 1].isalnum():
+        return None
+    end = spans.get("after_description")
+    chunk = raw[start:end] if end else raw[start:]
+    description = " ".join(chunk.split()).strip(" -")
+    if not _valid_description(description) or _skip_line(description):
+        return None
+    part = None
+    part_at = spans.get("part")
+    if part_at is not None and part_at < len(raw):
+        part_end = spans.get("after_part", start)
+        part_text = raw[part_at:part_end].strip()
+        token = part_text.split()[0] if part_text else ""
+        if token and _looks_like_part(token):
+            part = token.upper()
+    quantity = None
+    qty_at = spans.get("quantity")
+    if qty_at is not None and qty_at < len(raw):
+        qty_text = raw[qty_at:].strip().split()
+        quantity = _number(qty_text[0]) if qty_text else None
+    return LineItem(part, description, quantity, raw)
 
 
 def _add_description(found: list[str], known: set[str], description: str) -> None:
@@ -77,8 +195,21 @@ def _add_description(found: list[str], known: set[str], description: str) -> Non
 
 
 def parse_document_text(text: str, page: int | None = None) -> list[LineItem]:
-    items: list[LineItem] = []
-    seen: set[tuple[str, str]] = set()
+    under_header = rows_below_description_header(text)
+    if under_header is not None:
+        items: list[LineItem] = []
+        seen: set[tuple[str, str]] = set()
+        for item in under_header:
+            item.page = page
+            key = ((item.part_number or "").upper(), _norm(item.description))
+            if key in seen:
+                continue
+            seen.add(key)
+            items.append(item)
+        return items
+
+    items = []
+    seen = set()
     for raw_line in text.splitlines():
         item = parse_free_text_line(raw_line)
         if item is None:

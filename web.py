@@ -38,85 +38,137 @@ PAGE = """<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HSense tariff classification</title>
+<title>HSense</title>
 <style>
-  :root { color-scheme: light; --ink: #1c2430; --muted: #5c6b7a; --line: #d5dde6; --paper: #f4f7fb; --accent: #1f4e79; }
+  :root {
+    color-scheme: light;
+    --bg: #f4f0e8;
+    --ink: #1b1916;
+    --muted: #6f675e;
+    --card: #fffdf9;
+    --line: #e6dfd4;
+    --accent: #0e6b62;
+    --accent-dark: #0a4f49;
+    --chip: #e5f3f1;
+    --chip-ink: #0d3d38;
+    --danger-bg: #fdecea;
+    --danger: #8a332c;
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; font: 16px/1.45 "Segoe UI", sans-serif; color: var(--ink); background: var(--paper); }
-  header { background: var(--accent); color: white; padding: 28px 20px 22px; }
-  header h1 { margin: 0 0 6px; font-size: 1.6rem; font-weight: 650; }
-  header p { margin: 0; max-width: 48rem; color: #d7e6f5; }
-  main { max-width: 1100px; margin: 0 auto; padding: 22px 16px 48px; }
-  form, .panel { background: white; border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
-  .grid { display: grid; gap: 12px; grid-template-columns: 160px 1fr 120px; }
-  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
-  input, textarea { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; }
-  textarea { min-height: 160px; resize: vertical; }
-  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-  button, .button { background: var(--accent); color: white; border: 0; border-radius: 6px; padding: 9px 14px; font: inherit; cursor: pointer; text-decoration: none; }
-  button.secondary, .button.secondary { background: white; color: var(--accent); border: 1px solid var(--accent); }
-  .note { color: var(--muted); font-size: 0.9rem; margin: 10px 0 0; }
-  .error { background: #fff4f2; border: 1px solid #e7b2aa; color: #7a2e24; padding: 10px 12px; border-radius: 8px; margin: 14px 0; }
-  table { width: 100%; border-collapse: collapse; margin-top: 16px; background: white; }
-  th, td { border-bottom: 1px solid var(--line); text-align: left; padding: 10px 8px; vertical-align: top; }
-  th { font-size: 0.78rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--muted); }
-  td.reason { max-width: 28rem; }
-  code { font-family: ui-monospace, Consolas, monospace; }
-  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font: 16px/1.5 "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(900px 420px at 0% -10%, #fff 0%, transparent 55%),
+      var(--bg);
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 40px 20px 72px; }
+  .brand { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 36px; }
+  .brand strong { font-size: 0.95rem; letter-spacing: 0.16em; font-weight: 700; }
+  .brand span { color: var(--muted); font-size: 0.85rem; }
+  h1 { margin: 0 0 10px; font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.05; letter-spacing: -0.035em; font-weight: 650; }
+  .lede { margin: 0 0 28px; max-width: 36rem; color: var(--muted); font-size: 1.05rem; }
+  form, .results { background: var(--card); border: 1px solid var(--line); border-radius: 20px; }
+  form { padding: 18px; }
+  label.field { display: block; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  textarea {
+    width: 100%; min-height: 168px; resize: vertical; border: 0; border-radius: 14px;
+    background: #f7f4ee; padding: 14px 16px; font: inherit; color: var(--ink);
+  }
+  textarea:focus { outline: 2px solid var(--accent); background: white; }
+  .row { display: flex; gap: 12px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+  .drop {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px;
+    border: 1px dashed #cfc6b8; border-radius: 999px; color: var(--ink); cursor: pointer; background: white;
+  }
+  .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .drop small { color: var(--muted); }
+  button, .pdf {
+    border: 0; border-radius: 999px; padding: 11px 18px; font: inherit; font-weight: 600;
+    cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
+  }
+  button { background: var(--accent); color: white; margin-left: auto; }
+  button:hover { background: var(--accent-dark); }
+  .pdf { background: var(--ink); color: white; }
+  .pdf:hover { background: #000; }
+  .hint { margin: 12px 2px 0; color: var(--muted); font-size: 0.9rem; }
+  .error { margin-top: 16px; background: var(--danger-bg); color: var(--danger); border-radius: 14px; padding: 12px 14px; }
+  .results { margin-top: 22px; overflow: hidden; }
+  .bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 18px 0; }
+  .bar h2 { margin: 0; font-size: 1.05rem; font-weight: 650; }
+  .bar p { margin: 2px 0 0; color: var(--muted); font-size: 0.88rem; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { text-align: left; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 12px 18px; }
+  td { padding: 14px 18px; border-top: 1px solid var(--line); vertical-align: middle; }
+  td.duty { color: var(--muted); white-space: nowrap; }
+  .code {
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    background: var(--chip); color: var(--chip-ink); border-radius: 999px; padding: 4px 10px; font-size: 0.92rem;
+  }
+  .quiet { margin: 0; padding: 4px 18px 16px; color: var(--muted); font-size: 0.88rem; }
+  .quiet a { color: var(--accent-dark); }
+  @media (max-width: 640px) {
+    button { margin-left: 0; width: 100%; justify-content: center; }
+    .bar { align-items: flex-start; flex-direction: column; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>HSense</h1>
-  <p>Paste every product description, one per line, or upload an invoice. Each description is given an 8-digit SARS tariff code. The PDF lists the tariff header, the description, and the HS code.</p>
-</header>
-<main>
+<div class="wrap">
+  <div class="brand"><strong>HSENSE</strong><span>Schedule 1 · 28 August 2026</span></div>
+  <h1>Codes for the description column.</h1>
+  <p class="lede">Upload an invoice or paste the lines under Description. Everything above that header is left alone. Each description gets an 8-digit HS code.</p>
   <form method="post" enctype="multipart/form-data">
-    <div class="grid">
-      <div>
-        <label for="part">Part number</label>
-        <input id="part" name="part_number" value="{{ part_number }}" placeholder="ANTI-SEIZE">
-      </div>
-      <div>
-        <label for="description">Descriptions, one per line</label>
-        <textarea id="description" name="description" placeholder="Sealing compound - TIN&#10;Anti Seize Compound - 500g&#10;PVA wood adhesive - 750g&#10;Portland cement 50 kg bag">{{ description }}</textarea>
-      </div>
-      <div>
-        <label for="quantity">Quantity</label>
-        <input id="quantity" name="quantity" value="{{ quantity }}" placeholder="5">
-      </div>
+    <label class="field" for="description">Under Description</label>
+    <textarea id="description" name="description" placeholder="Sealing compound - TIN&#10;Anti Seize Compound - 500g&#10;PVA wood adhesive - 750g">{{ description }}</textarea>
+    <div class="row">
+      <label class="drop">
+        <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.bmp,.heic,.heif">
+        <span>Upload invoice</span>
+        <small>PDF or image</small>
+      </label>
+      <button type="submit">Assign HS codes</button>
     </div>
-    <p class="note">Or upload a digital PDF, a scanned PDF, or an image. Every description in the file is classified.</p>
-    <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.bmp,.heic,.heif">
-    <div class="actions">
-      <button type="submit">Classify</button>
-      {% if rows %}
-      <a class="button secondary" href="/export.pdf">Download PDF</a>
-      <a class="button secondary" href="/export.json">Download JSON</a>
-      <a class="button secondary" href="/export.csv">Download CSV</a>
-      {% endif %}
-    </div>
+    <p class="hint">Only rows below a Description header are read. A paste with no header is taken one line at a time.</p>
   </form>
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
   {% if rows %}
-  <table>
-    <thead>
-      <tr><th>Line</th><th>Header</th><th>Description</th><th>HS code</th><th>Duty</th></tr>
-    </thead>
-    <tbody>
-      {% for row in rows %}
-      <tr>
-        <td>{{ row.line_number }}</td>
-        <td>{{ row.header or "" }}</td>
-        <td>{{ row.description }}</td>
-        <td><code>{{ row.hs_code or "" }}</code></td>
-        <td>{{ row.duty_rate_general or "" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <section class="results">
+    <div class="bar">
+      <div>
+        <h2>{{ rows|length }} description{{ "s" if rows|length != 1 else "" }}</h2>
+        <p>Header, description, and HS code are in the PDF.</p>
+      </div>
+      <a class="pdf" href="/export.pdf">Download PDF</a>
+    </div>
+    <table>
+      <thead><tr><th>Description</th><th>HS code</th><th>Duty</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.description }}</td>
+          <td><span class="code">{{ row.hs_code or "—" }}</span></td>
+          <td class="duty">{{ row.duty_rate_general or "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="quiet"><a href="/export.json">JSON</a> · <a href="/export.csv">CSV</a></p>
+  </section>
   {% endif %}
-</main>
+</div>
+<script>
+  const fileInput = document.querySelector(".drop input");
+  const fileLabel = document.querySelector(".drop small");
+  if (fileInput && fileLabel) {
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files && fileInput.files[0];
+      fileLabel.textContent = file ? file.name : "PDF or image";
+    });
+  }
+</script>
 </body>
 </html>
 """
@@ -172,13 +224,10 @@ def _classify_upload(upload) -> tuple[list[dict], str]:
         path = Path(folder) / Path(upload.filename).name
         upload.save(path)
         extraction = extract_file(path)
-    by_description = {item.description.casefold(): item for item in extraction.lines}
-    ordered: list[LineItem] = list(extraction.lines)
-    for description in collect_descriptions(extraction.text):
-        if description.casefold() in by_description:
-            continue
-        ordered.append(LineItem(None, description, None, description))
-        by_description[description.casefold()] = ordered[-1]
+    ordered = list(extraction.lines)
+    if not ordered and extraction.text:
+        for description in collect_descriptions(extraction.text):
+            ordered.append(LineItem(None, description, None, description))
     if not ordered:
         detail = " ".join(extraction.warnings) or "No product descriptions were found in that file."
         raise ValueError(detail)

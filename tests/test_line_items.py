@@ -62,6 +62,41 @@ def test_plain_list_keeps_every_description():
     ]
 
 
+def test_only_the_description_column_below_its_header():
+    text = """
+    Anti Seize Compound - 500g
+    ACME INDUSTRIAL SUPPLIES (PTY) LTD
+    Part No          Description                         Qty
+    CS1900           Sealing compound - TIN              10
+    CEM-50           Portland cement 50 kg bag           20
+    Subtotal                                          23
+    """
+    assert collect_descriptions(text) == [
+        "Sealing compound - TIN",
+        "Portland cement 50 kg bag",
+    ]
+    items = parse_document_text(text)
+    assert [item.description for item in items] == [
+        "Sealing compound - TIN",
+        "Portland cement 50 kg bag",
+    ]
+    assert items[0].part_number == "CS1900"
+    assert items[0].quantity == 10
+
+
+def test_lines_under_a_bare_description_header():
+    text = """
+    Warehouse note: engine oil 5L is in bay 3
+    Description
+    Sealing compound - TIN
+    PVA wood adhesive - 750g
+    """
+    assert collect_descriptions(text) == [
+        "Sealing compound - TIN",
+        "PVA wood adhesive - 750g",
+    ]
+
+
 def test_invoice_descriptions_skip_addresses_and_totals():
     descriptions = [item.lower() for item in collect_descriptions(INVOICE)]
     assert any("sealing compound" in item for item in descriptions)
