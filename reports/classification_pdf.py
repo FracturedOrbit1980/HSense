@@ -35,9 +35,9 @@ def classification_pdf(
         fontName="Times-Bold",
         fontSize=16,
         leading=20,
-        textColor=colors.HexColor("#1f4e79"),
+        textColor=colors.HexColor("#033591"),
     )
-    sub = ParagraphStyle("sub", fontName="Times-Roman", fontSize=10, leading=13, textColor=colors.HexColor("#3d4c5c"))
+    sub = ParagraphStyle("sub", fontName="Times-Roman", fontSize=10, leading=13, textColor=colors.HexColor("#404040"))
     cell = ParagraphStyle("cell", fontName="Times-Roman", fontSize=9, leading=12)
     head = ParagraphStyle("head", fontName="Times-Bold", fontSize=9, leading=12, textColor=colors.white)
 
@@ -84,16 +84,16 @@ def classification_pdf(
     table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f4e79")),
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#033591")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("FONTNAME", (0, 0), (-1, 0), "Times-Bold"),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#8aa0b8")),
+                ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#8ea4c4")),
                 ("LEFTPADDING", (0, 0), (-1, -1), 5),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 5),
                 ("TOPPADDING", (0, 0), (-1, -1), 5),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f4f7fb")]),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#e7eef6")]),
             ]
         )
     )

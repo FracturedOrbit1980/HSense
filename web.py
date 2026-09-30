@@ -45,15 +45,15 @@ PAGE = """<!DOCTYPE html>
 <style>
   :root {
     color-scheme: light;
-    --bg: #f4f0e8;
-    --ink: #1b1916;
-    --muted: #6f675e;
-    --card: #fffdf9;
-    --line: #e6dfd4;
-    --accent: #0e6b62;
-    --accent-dark: #0a4f49;
-    --chip: #e5f3f1;
-    --chip-ink: #0d3d38;
+    --bg: #e7eef6;
+    --ink: #0a0a0a;
+    --muted: #4f4f4f;
+    --card: #ffffff;
+    --line: #d5deea;
+    --accent: #033591;
+    --accent-dark: #022669;
+    --chip: #e7eef8;
+    --chip-ink: #022669;
     --danger-bg: #fdecea;
     --danger: #8a332c;
   }
@@ -63,30 +63,72 @@ PAGE = """<!DOCTYPE html>
     min-height: 100vh;
     font: 16px/1.5 "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
     color: var(--ink);
-    background:
-      radial-gradient(900px 420px at 0% -10%, #fff 0%, transparent 55%),
-      var(--bg);
+    background: var(--bg);
   }
+  .mast {
+    position: relative;
+    min-height: 248px;
+    color: white;
+    background: #022669 url("/static/lud-stage.jpg") center right / cover no-repeat;
+    overflow: hidden;
+  }
+  .mast::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, rgba(2, 38, 105, 0.88) 0%, rgba(2, 38, 105, 0.42) 48%, rgba(3, 53, 145, 0.12) 100%);
+  }
+  .mast-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 36px 20px 40px;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+  .plate {
+    flex: 0 0 auto;
+    background: #fff;
+    border-radius: 18px;
+    padding: 14px 16px 10px;
+    transform: perspective(900px) rotateY(-10deg) rotateX(5deg);
+    transform-style: preserve-3d;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 22px 36px rgba(0, 0, 0, 0.38),
+      0 6px 0 rgba(255, 255, 255, 0.18);
+  }
+  .plate img { display: block; width: 210px; height: auto; }
+  .kicker { margin: 0 0 6px; letter-spacing: 0.16em; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
+  h1 { margin: 0; font-size: clamp(1.7rem, 3vw, 2.35rem); line-height: 1.08; letter-spacing: -0.03em; font-weight: 700; }
+  .when { margin: 8px 0 0; color: rgba(255, 255, 255, 0.82); font-size: 0.92rem; }
   .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 20px 64px; }
-  .brand { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
-  .brand strong { font-size: 0.92rem; letter-spacing: 0.16em; font-weight: 700; }
-  .brand span { color: var(--muted); font-size: 0.85rem; }
-  h1 { margin: 0 0 8px; font-size: clamp(1.7rem, 3vw, 2.3rem); line-height: 1.1; letter-spacing: -0.03em; font-weight: 650; }
-  .lede { margin: 0 0 18px; max-width: 40rem; color: var(--muted); font-size: 1rem; }
-  form, .results, .sheet { background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
+  .lede { margin: 0 0 16px; max-width: 46rem; color: var(--muted); font-size: 0.98rem; }
+  form, .results, .sheet {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.95) inset,
+      0 14px 32px rgba(2, 38, 105, 0.12),
+      0 2px 0 rgba(3, 53, 145, 0.05);
+  }
   form { padding: 16px; }
   .workspace { display: grid; grid-template-columns: minmax(260px, 380px) minmax(0, 1fr); gap: 18px; align-items: start; margin-top: 18px; }
   .workspace.solo { grid-template-columns: 1fr; }
   label.field { display: block; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
   textarea {
     width: 100%; min-height: 168px; resize: vertical; border: 0; border-radius: 14px;
-    background: #f7f4ee; padding: 14px 16px; font: inherit; color: var(--ink);
+    background: #f3f6fb; padding: 14px 16px; font: inherit; color: var(--ink);
+    box-shadow: inset 0 2px 6px rgba(2, 38, 105, 0.06);
   }
   textarea:focus { outline: 2px solid var(--accent); background: white; }
   .row { display: flex; gap: 12px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
   .drop {
     display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px;
-    border: 1px dashed #cfc6b8; border-radius: 999px; color: var(--ink); cursor: pointer; background: white;
+    border: 1px dashed #8ea4c4; border-radius: 999px; color: var(--ink); cursor: pointer; background: white;
   }
   .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
   .drop small { color: var(--muted); }
@@ -94,10 +136,20 @@ PAGE = """<!DOCTYPE html>
     border: 0; border-radius: 999px; padding: 11px 18px; font: inherit; font-weight: 600;
     cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
   }
-  button { background: var(--accent); color: white; margin-left: auto; }
-  button:hover { background: var(--accent-dark); }
-  .pdf { background: var(--ink); color: white; }
-  .pdf:hover { background: #000; }
+  button {
+    margin-left: auto;
+    color: white;
+    background: linear-gradient(#0a4cb8, var(--accent));
+    box-shadow: 0 4px 0 var(--accent-dark), 0 12px 20px rgba(2, 38, 105, 0.28);
+  }
+  button:hover { transform: translateY(1px); box-shadow: 0 3px 0 var(--accent-dark), 0 8px 16px rgba(2, 38, 105, 0.24); }
+  button:active { transform: translateY(4px); box-shadow: 0 0 0 var(--accent-dark); }
+  .pdf {
+    color: white;
+    background: linear-gradient(#0a0a0a, #262626);
+    box-shadow: 0 4px 0 #000, 0 10px 16px rgba(0, 0, 0, 0.18);
+  }
+  .pdf:hover { transform: translateY(1px); }
   .hint { margin: 12px 2px 0; color: var(--muted); font-size: 0.9rem; }
   .error { margin-top: 16px; background: var(--danger-bg); color: var(--danger); border-radius: 14px; padding: 12px 14px; }
   .results { margin-top: 22px; overflow: hidden; }
@@ -122,6 +174,7 @@ PAGE = """<!DOCTYPE html>
   .review { padding: 16px 18px 14px; border-top: 1px solid var(--line); }
   .review.bad { background: #fffaf8; }
   .review.critical { background: #fff4f1; }
+  .review.ok { box-shadow: inset 4px 0 0 #1c6b38; }
   .review header { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
   .part { margin: 0; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
   .review h3 { margin: 2px 0 0; font-size: 1.02rem; font-weight: 650; }
@@ -130,17 +183,17 @@ PAGE = """<!DOCTYPE html>
   .status.bad { background: var(--danger-bg); color: var(--danger); }
   .status.critical { background: #2c1210; color: white; }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-  .pair div { background: #f6f3ed; border-radius: 12px; padding: 10px 12px; }
+  .pair div { background: #f3f6fb; border-radius: 12px; padding: 10px 12px; box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(2, 38, 105, 0.05); }
   .review.bad .pair div:first-child, .review.critical .pair div:first-child { background: #fdecea; }
   .pair span { display: block; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
   .pair strong { font-family: ui-monospace, Consolas, monospace; font-size: 0.98rem; font-weight: 650; }
   .pair em { font-style: normal; color: var(--muted); font-family: inherit; font-size: 0.82rem; font-weight: 600; }
-  .why { margin: 10px 0 0; color: #3e3832; font-size: 0.92rem; }
+  .why { margin: 10px 0 0; color: #262626; font-size: 0.92rem; }
   @media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
   .quiet { margin: 0; padding: 4px 18px 16px; color: var(--muted); font-size: 0.88rem; }
   .quiet a { color: var(--accent-dark); }
   .sheet { padding: 12px; position: sticky; top: 16px; }
-  .sheet img, #local-preview img { width: 100%; height: auto; border-radius: 12px; display: block; background: #ece7df; }
+  .sheet img, #local-preview img { width: 100%; height: auto; border-radius: 12px; display: block; background: #e7eef6; box-shadow: 0 8px 18px rgba(2, 38, 105, 0.12); }
   .sheet figcaption, #local-preview p { margin: 8px 4px 0; color: var(--muted); font-size: 0.82rem; }
   #local-preview { display: none; margin-top: 12px; }
   #local-preview.visible { display: block; }
@@ -150,13 +203,26 @@ PAGE = """<!DOCTYPE html>
     .sheet { position: static; }
     button { margin-left: 0; width: 100%; justify-content: center; }
     .bar { align-items: flex-start; flex-direction: column; }
+    .mast-inner { flex-direction: column; align-items: flex-start; }
+    .plate { transform: none; }
+    .plate img { width: 180px; }
   }
 </style>
 </head>
 <body>
+<header class="mast">
+  <div class="mast-inner">
+    <a class="plate" href="https://www.lud.co.za/" target="_blank" rel="noopener">
+      <img src="/static/lud-logo.png" alt="LUD Logistics" width="210" height="92">
+    </a>
+    <div>
+      <p class="kicker">HSense</p>
+      <h1>Check the description column.</h1>
+      <p class="when">Schedule 1 · {{ schedule }}</p>
+    </div>
+  </div>
+</header>
 <div class="wrap">
-  <div class="brand"><strong>HSENSE</strong><span>Schedule 1 · 28 August 2026</span></div>
-  <h1>Check the description column.</h1>
   <p class="lede">{{ framework }}, {{ schedule }}. Lines under Description are classified to an 8-digit line, and a handwritten code is verified against that line.</p>
   <form method="post" enctype="multipart/form-data" autocomplete="off">
     <label class="field" for="description">Or paste the lines under Description</label>
