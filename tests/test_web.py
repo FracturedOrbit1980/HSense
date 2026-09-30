@@ -7,6 +7,7 @@ def test_opening_the_page_clears_the_previous_classification():
     assert posted.status_code == 200
     assert b"2523.29.00" in posted.data
     assert b"Portland cement 50 kg bag" in posted.data
+    assert b"Written HS code" not in posted.data
 
     opened = client.get("/")
     assert opened.status_code == 200

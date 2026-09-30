@@ -182,9 +182,8 @@ PAGE = """<!DOCTYPE html>
   .status.ok { background: #e5f4ea; color: #1c6b38; }
   .status.bad { background: var(--danger-bg); color: var(--danger); }
   .status.critical { background: #2c1210; color: white; }
-  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .pair { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 12px; }
   .pair div { background: #f3f6fb; border-radius: 12px; padding: 10px 12px; box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(2, 38, 105, 0.05); }
-  .review.bad .pair div:first-child, .review.critical .pair div:first-child { background: #fdecea; }
   .pair span { display: block; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
   .pair strong { font-family: ui-monospace, Consolas, monospace; font-size: 0.98rem; font-weight: 650; }
   .pair em { font-style: normal; color: var(--muted); font-family: inherit; font-size: 0.82rem; font-weight: 600; }
@@ -270,11 +269,6 @@ PAGE = """<!DOCTYPE html>
           {% endif %}
         </header>
         <div class="pair">
-          <div>
-            <span>Written HS code</span>
-            <strong>{{ row.handwritten_shown or "—" }}</strong>
-            {% if row.same_as_above %}<em> Same as above</em>{% endif %}
-          </div>
           <div>
             <span>Recommended</span>
             <strong>{{ row.recommended_label or row.hs_code or "—" }}</strong>

@@ -53,7 +53,6 @@ def classification_pdf(
 
     header_cells = [
         Paragraph("Description", head),
-        Paragraph("Written", head),
         Paragraph("Recommended", head),
         Paragraph("Explanation", head),
     ]
@@ -73,14 +72,13 @@ def classification_pdf(
             explanation = f"{mark}. {explanation}"
         table_rows.append([
             Paragraph(escape(str(row.get("description") or "")), cell),
-            Paragraph(escape(str(row.get("handwritten_shown") or row.get("handwritten") or "")), cell),
             Paragraph(escape(str(row.get("recommended_label") or row.get("hs_code") or "")), cell),
             Paragraph(escape(str(explanation)), cell),
         ])
     if len(table_rows) == 1:
-        table_rows.append([Paragraph("No descriptions were classified.", cell), Paragraph("", cell), Paragraph("", cell), Paragraph("", cell)])
+        table_rows.append([Paragraph("No descriptions were classified.", cell), Paragraph("", cell), Paragraph("", cell)])
 
-    table = Table(table_rows, colWidths=[42 * mm, 32 * mm, 36 * mm, 68 * mm], repeatRows=1)
+    table = Table(table_rows, colWidths=[62 * mm, 42 * mm, 74 * mm], repeatRows=1)
     table.setStyle(
         TableStyle(
             [

@@ -27,6 +27,7 @@ def test_pdf_lists_header_description_and_code():
     assert "Harmonized System" in text
     assert "Schedule 1 Part 1" in text
     assert "Description" in text
+    assert "Written" not in text
     assert "Recommended" in text
     assert "Explanation" in text
     assert "3403.99.90" in text

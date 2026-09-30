@@ -85,7 +85,7 @@ pip install -r requirements.txt
 python web.py
 ```
 
-Then open [HSense](http://127.0.0.1:43123). Upload an invoice or paste text. Each line shows the written code, the recommended code, and an explanation that cites the WCO General Rules and the Schedule 1 wording of both codes. A handwritten `"` repeats the line above. A mismatch is marked Incorrect. A cosmetics code on these goods is marked Critical.
+Then open [HSense](http://127.0.0.1:43123). Upload an invoice or paste text. Each line shows the recommended code and an explanation that cites the WCO General Rules and the Schedule 1 wording. A handwritten `"` still repeats the code above for the check. A mismatch is marked Incorrect. A cosmetics code on these goods is marked Critical.
 
 ## Commands
 
