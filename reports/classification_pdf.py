@@ -49,31 +49,36 @@ def classification_pdf(
     story.append(Paragraph(escape(f"{len(rows)} description{'s' if len(rows) != 1 else ''}"), sub))
     story.append(Spacer(1, 10))
 
-    written = any(row.get("handwritten") for row in rows)
     header_cells = [
-        Paragraph("Header", head),
         Paragraph("Description", head),
-        Paragraph("HS code", head),
+        Paragraph("Written", head),
+        Paragraph("Recommended", head),
+        Paragraph("Explanation", head),
     ]
-    if written:
-        header_cells.extend([Paragraph("Handwritten", head), Paragraph("Check", head)])
     table_rows = [header_cells]
     for row in rows:
-        cells = [
-            Paragraph(escape(str(row.get("header") or "")), cell),
+        flag = row.get("flag") or ""
+        if flag == "critical":
+            mark = "Critical"
+        elif flag == "incorrect":
+            mark = "Incorrect"
+        elif flag == "ok":
+            mark = "Correct"
+        else:
+            mark = ""
+        explanation = row.get("explanation") or row.get("header") or ""
+        if mark:
+            explanation = f"{mark}. {explanation}"
+        table_rows.append([
             Paragraph(escape(str(row.get("description") or "")), cell),
-            Paragraph(escape(str(row.get("hs_code") or "")), cell),
-        ]
-        if written:
-            mark = "Incorrect" if row.get("flag") == "incorrect" else ""
-            cells.append(Paragraph(escape(str(row.get("handwritten_shown") or "")), cell))
-            cells.append(Paragraph(escape(mark), cell))
-        table_rows.append(cells)
+            Paragraph(escape(str(row.get("handwritten_shown") or row.get("handwritten") or "")), cell),
+            Paragraph(escape(str(row.get("recommended_label") or row.get("hs_code") or "")), cell),
+            Paragraph(escape(str(explanation)), cell),
+        ])
     if len(table_rows) == 1:
-        table_rows.append([Paragraph("", cell), Paragraph("No descriptions were classified.", cell), Paragraph("", cell)])
+        table_rows.append([Paragraph("No descriptions were classified.", cell), Paragraph("", cell), Paragraph("", cell), Paragraph("", cell)])
 
-    widths = [52 * mm, 62 * mm, 28 * mm, 24 * mm, 22 * mm] if written else [70 * mm, 78 * mm, 28 * mm]
-    table = Table(table_rows, colWidths=widths, repeatRows=1)
+    table = Table(table_rows, colWidths=[42 * mm, 32 * mm, 36 * mm, 68 * mm], repeatRows=1)
     table.setStyle(
         TableStyle(
             [

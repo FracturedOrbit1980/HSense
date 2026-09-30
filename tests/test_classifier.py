@@ -99,11 +99,17 @@ def test_leonardo_lines_and_ditto_display():
     seal = CLASSIFIER.classify("Pro Seal - TIN")
     assert seal.hs_code == "3214.10.00"
     inhibitor = CLASSIFIER.classify("Corrosion Inhibitor - 500ML")
-    assert inhibitor.hs_code == "3811.90.00"
+    assert inhibitor.hs_code == "3403.99.90"
+    tectyl = CLASSIFIER.classify("TECTYL 891D Corrosion Inhibitor - 500ML")
+    assert tectyl.hs_code == "3403.19.90"
+    ardrox = CLASSIFIER.classify("ARDROX AV40 Compound : Corrosion Inhibitor - LT")
+    assert ardrox.hs_code == "3403.19.90"
+    gearbox = CLASSIFIER.classify("AEROSHELL 555 Main Gearbox Oil - LT")
+    assert gearbox.hs_code == "3403.99.90"
     pad = CLASSIFIER.classify("Scotch Brite")
     assert pad.hs_code == "6805.30.00"
     fluid = CLASSIFIER.classify("Nyco Hydraulic Fluid - LT")
-    assert fluid.hs_code.startswith("2710")
+    assert fluid.hs_code == "3403.99.90"
     glue = CLASSIFIER.classify("Loctite - 50Ml")
     assert glue.hs_code == "3506.10.00"
     film = CLASSIFIER.classify("Solidfilm Lubricant - TIN")
@@ -121,7 +127,7 @@ def test_leonardo_lines_and_ditto_display():
     assert rows[0]["hs_code"] == "3214.10.00"
     assert rows[0]["handwritten"] == "3214.90.00"
     assert rows[0]["flag"] == "incorrect"
-    assert rows[1]["handwritten_shown"] == '"'
+    assert rows[1]["handwritten_shown"] == '3214.90.00 "'
     assert rows[1]["handwritten"] == "3214.90.00"
     assert rows[1]["flag"] == "incorrect"
     assert rows[1]["hs_code"] == "3214.10.00"
@@ -134,6 +140,13 @@ def test_leonardo_lines_and_ditto_display():
         "invoice.jpg",
     )
     assert matched[0]["flag"] == "ok"
+    critical = classify_extracted_lines(
+        CLASSIFIER,
+        [LineItem("OIL", "Main Gearbox Oil - LT", 1, "a", noted_code="3304.99.90")],
+        "invoice.jpg",
+    )
+    assert critical[0]["hs_code"] == "3403.99.90"
+    assert critical[0]["flag"] == "critical"
 
 
 def test_common_goods_follow_heading_terms():

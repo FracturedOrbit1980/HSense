@@ -24,9 +24,9 @@ def test_pdf_lists_header_description_and_code():
     document = pymupdf.open(stream=payload, filetype="pdf")
     text = "\n".join(page.get_text() for page in document)
     document.close()
-    assert "Header" in text
     assert "Description" in text
-    assert "HS code" in text
+    assert "Recommended" in text
+    assert "Explanation" in text
     assert "3403.99.90" in text
     assert "3214.10.00" in text
     assert "Anti Seize Compound - 500g" in text

@@ -279,26 +279,48 @@ def classify_extracted_lines(classifier: WCOClassifier, items, source_file: str)
         row = result.as_dict(index)
         written = getattr(item, "noted_code", None) or None
         ditto = bool(getattr(item, "same_as_above", False))
+        checked = row.get("hs_code") or ""
+        rule = match_rules(item.description)
+        explanation = (rule.review if rule is not None and rule.review else "").strip()
+        if not explanation:
+            explanation = row.get("wco_reasoning") or ""
         row["handwritten"] = written or ""
         row["same_as_above"] = ditto
-        row["handwritten_shown"] = '"' if ditto and written else (written or "")
-        checked = row.get("hs_code") or ""
+        if ditto and written:
+            row["handwritten_shown"] = f'{written} "'
+        else:
+            row["handwritten_shown"] = written or ""
         row["hs_shown"] = checked
         if not written:
             row["flag"] = ""
             row["flag_note"] = ""
+            row["recommended_label"] = checked
+        elif written == checked:
+            row["flag"] = "ok"
+            row["flag_note"] = "Handwritten code matches."
+            row["recommended_label"] = f"{checked} · No change"
+        elif written[:2] == "33" and not checked.startswith("33"):
+            row["flag"] = "critical"
+            row["flag_note"] = (
+                f"Handwritten {written} is Chapter 33, cosmetics and skincare. "
+                f"These goods are {checked}."
+            )
+            row["recommended_label"] = checked
+            if "cosmetic" not in explanation.lower():
+                explanation = (
+                    f"Critical. {written} is cosmetics and skincare. {explanation}"
+                )
         elif classifier.db.get(written) is None:
             row["flag"] = "incorrect"
             row["flag_note"] = f"Handwritten {written} is not a declarable code on this schedule."
-        elif written != checked:
-            row["flag"] = "incorrect"
-            carried = " The quote repeats the code from the line above." if ditto else ""
-            row["flag_note"] = f"Handwritten {written} does not match {checked}.{carried}"
+            row["recommended_label"] = checked
         else:
-            row["flag"] = "ok"
-            row["flag_note"] = "Handwritten code matches."
-        if row["flag"] == "incorrect":
-            note = row["flag_note"]
-            row["wco_reasoning"] = f"{note} {row['wco_reasoning']}"
+            row["flag"] = "incorrect"
+            carried = " The quote repeats the line above." if ditto else ""
+            row["flag_note"] = f"Handwritten {written} does not match {checked}.{carried}"
+            row["recommended_label"] = checked
+        row["explanation"] = explanation
+        if row["flag"] in {"incorrect", "critical"}:
+            row["wco_reasoning"] = f"{row['flag_note']} {row['wco_reasoning']}"
         rows.append(row)
     return rows

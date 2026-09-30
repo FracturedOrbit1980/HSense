@@ -118,6 +118,24 @@ PAGE = """<!DOCTYPE html>
     background: var(--danger-bg); color: var(--danger); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
   }
   tr.bad td { background: #fff8f6; }
+  .review { padding: 16px 18px 14px; border-top: 1px solid var(--line); }
+  .review.bad { background: #fffaf8; }
+  .review.critical { background: #fff4f1; }
+  .review header { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .part { margin: 0; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .review h3 { margin: 2px 0 0; font-size: 1.02rem; font-weight: 650; }
+  .status { border-radius: 999px; padding: 4px 9px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+  .status.ok { background: #e5f4ea; color: #1c6b38; }
+  .status.bad { background: var(--danger-bg); color: var(--danger); }
+  .status.critical { background: #2c1210; color: white; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .pair div { background: #f6f3ed; border-radius: 12px; padding: 10px 12px; }
+  .review.bad .pair div:first-child, .review.critical .pair div:first-child { background: #fdecea; }
+  .pair span { display: block; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .pair strong { font-family: ui-monospace, Consolas, monospace; font-size: 0.98rem; font-weight: 650; }
+  .pair em { font-style: normal; color: var(--muted); font-family: inherit; font-size: 0.82rem; font-weight: 600; }
+  .why { margin: 10px 0 0; color: #3e3832; font-size: 0.92rem; }
+  @media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
   .quiet { margin: 0; padding: 4px 18px 16px; color: var(--muted); font-size: 0.88rem; }
   .quiet a { color: var(--accent-dark); }
   .sheet { padding: 12px; position: sticky; top: 16px; }
@@ -171,22 +189,33 @@ PAGE = """<!DOCTYPE html>
         </div>
         <a class="pdf" href="/export.pdf">Download PDF</a>
       </div>
-      <div class="table-wrap">
-      <table>
-        <thead><tr><th>Description</th><th>HS code</th><th>Handwritten</th><th></th><th>Duty</th></tr></thead>
-        <tbody>
-          {% for row in rows %}
-          <tr class="{{ 'bad' if row.flag == 'incorrect' else '' }}">
-            <td>{{ row.description }}</td>
-            <td><span class="code">{{ row.hs_code or "—" }}</span></td>
-            <td><span class="written {{ 'bad' if row.flag == 'incorrect' else '' }}" title="{{ row.flag_note or '' }}">{{ row.handwritten_shown or "—" }}</span></td>
-            <td>{% if row.flag == 'incorrect' %}<span class="flag">Incorrect</span>{% endif %}</td>
-            <td class="duty">{{ row.duty_rate_general or "" }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      </div>
+      {% for row in rows %}
+      {% set tone = 'critical' if row.flag == 'critical' else ('bad' if row.flag == 'incorrect' else ('ok' if row.flag == 'ok' else '')) %}
+      <article class="review {{ tone }}">
+        <header>
+          <div>
+            {% if row.part_number %}<p class="part">{{ row.part_number }}</p>{% endif %}
+            <h3>{{ row.description }}</h3>
+          </div>
+          {% if row.flag == 'ok' %}<span class="status ok">Correct</span>
+          {% elif row.flag == 'critical' %}<span class="status critical">Critical</span>
+          {% elif row.flag == 'incorrect' %}<span class="status bad">Incorrect</span>
+          {% endif %}
+        </header>
+        <div class="pair">
+          <div>
+            <span>Written HS code</span>
+            <strong>{{ row.handwritten_shown or "—" }}</strong>
+            {% if row.same_as_above %}<em> Same as above</em>{% endif %}
+          </div>
+          <div>
+            <span>Recommended</span>
+            <strong>{{ row.recommended_label or row.hs_code or "—" }}</strong>
+          </div>
+        </div>
+        {% if row.explanation %}<p class="why">{{ row.explanation }}</p>{% endif %}
+      </article>
+      {% endfor %}
       <p class="quiet"><a href="/export.json">JSON</a> · <a href="/export.csv">CSV</a></p>
     </section>
     {% endif %}
@@ -259,7 +288,7 @@ def _clear_preview() -> None:
 
 def _view_context(**extra):
     rows = extra.get("rows", _last_rows)
-    flagged = sum(1 for row in rows if row.get("flag") == "incorrect")
+    flagged = sum(1 for row in rows if row.get("flag") in {"incorrect", "critical"})
     extra.setdefault("rows", rows)
     extra.setdefault("description", "")
     extra.setdefault("part_number", "")
