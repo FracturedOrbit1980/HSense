@@ -26,7 +26,6 @@ if str(ROOT) not in sys.path:
 from data.tariff_db import TariffDB, format_code, format_heading
 from engine.classifier import PUBLIC_FIELDS, WCOClassifier, classify_extracted_lines
 from engine.gri import FRAMEWORK
-from engine.notify import AUTHORITY_INBOX, send_authorisation_email
 from parsers.line_items import LineItem, _number, collect_descriptions, parse_document_text
 from parsers.universal_extractor import SUPPORTED_EXTENSIONS, extract_file
 from reports.classification_pdf import classification_pdf
@@ -320,7 +319,6 @@ PAGE = """<!DOCTYPE html>
           </select>
         </label>
         <button class="pdf" type="submit">Download PDF</button>
-        <p class="hint">Authorising emails the PDF to {{ authority_inbox }}.</p>
       </div>
       <p class="quiet"><a href="/export.json">JSON</a> · <a href="/export.csv">CSV</a></p>
     </form>
@@ -489,7 +487,6 @@ def _view_context(**extra):
     extra.setdefault("error", None)
     extra.setdefault("document_name", _last_source)
     extra["authorisers"] = AUTHORISERS
-    extra["authority_inbox"] = AUTHORITY_INBOX
     extra["framework"] = FRAMEWORK
     extra["schedule"] = _database.schedule_date
     extra["preview"] = bool(_preview_token and PREVIEW_PATH.exists())
@@ -647,14 +644,6 @@ def _pdf_response(rows: list[dict], author: str) -> Response:
         source=_last_source,
         author=author,
         checked_at=checked_at,
-        verify_url=verify_url,
-    )
-    send_authorisation_email(
-        author=author,
-        checked_at=checked_at,
-        source=_last_source,
-        rows=rows,
-        pdf=payload,
         verify_url=verify_url,
     )
     return Response(

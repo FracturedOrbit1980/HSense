@@ -85,7 +85,7 @@ pip install -r requirements.txt
 python web.py
 ```
 
-Then open [HSense](http://127.0.0.1:43123). Upload an invoice, take a photo with the phone camera, or paste text. Each line shows the recommended code, which you can amend, and an explanation that cites the WCO General Rules and the Schedule 1 wording. A handwritten `"` still repeats the code above for the check. A mismatch is marked Incorrect. A cosmetics code on these goods is marked Critical. Choose Christie, Ronel, Nelly, or Thabang to authorise a one-page PDF. That authorisation emails the PDF to Olive@lud.co.za through mail.lud.co.za. Set `HS_SMTP_USER`, `HS_SMTP_PASSWORD`, and `HS_SMTP_FROM` to a mailbox that server will accept. The PDF carries a QR code with the LUD logo; scanning it shows who did the final check.
+Then open [HSense](http://127.0.0.1:43123). Upload an invoice, take a photo with the phone camera, or paste text. Each line shows the recommended code, which you can amend, and an explanation that cites the WCO General Rules and the Schedule 1 wording. A handwritten `"` still repeats the code above for the check. A mismatch is marked Incorrect. A cosmetics code on these goods is marked Critical. Choose Christie, Ronel, Nelly, or Thabang to authorise a one-page PDF. The PDF carries a QR code with the LUD logo; scanning it shows who did the final check.
 
 ## Commands
 
