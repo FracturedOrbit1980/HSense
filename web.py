@@ -134,6 +134,19 @@ PAGE = """<!DOCTYPE html>
   }
   .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
   .drop small { color: var(--muted); }
+  button.camera {
+    margin-left: 0;
+    color: white;
+    background: #033591;
+    box-shadow: 0 4px 0 #022669, 0 10px 16px rgba(2, 38, 105, 0.25);
+  }
+  button.camera small { color: rgba(255, 255, 255, 0.82); font-weight: 500; }
+  #camera-panel { margin-top: 12px; background: #022669; border-radius: 16px; padding: 10px; }
+  #camera-panel[hidden] { display: none; }
+  #camera-video { width: 100%; max-height: 62vh; object-fit: cover; border-radius: 12px; background: #000; display: block; }
+  .camera-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .camera-actions button { margin-left: 0; flex: 1; justify-content: center; }
+  #camera-close { background: transparent; color: white; box-shadow: none; border: 1px solid rgba(255, 255, 255, 0.45); }
   button, .pdf {
     border: 0; border-radius: 999px; padding: 11px 18px; font: inherit; font-weight: 600;
     cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
@@ -214,6 +227,7 @@ PAGE = """<!DOCTYPE html>
     .sheet { position: static; }
     button { margin-left: 0; width: 100%; justify-content: center; }
     .bar { align-items: flex-start; flex-direction: column; }
+    .camera-actions button { width: auto; }
     .mast-inner { flex-direction: column; align-items: flex-start; }
     .plate { transform: none; }
     .plate img { width: 180px; }
@@ -235,19 +249,28 @@ PAGE = """<!DOCTYPE html>
 </header>
 <div class="wrap">
   <p class="lede">{{ framework }}, {{ schedule }}. Lines under Description are classified to an 8-digit line, and a handwritten code is verified against that line.</p>
-  <form method="post" enctype="multipart/form-data" autocomplete="off">
+  <form id="classify-form" method="post" enctype="multipart/form-data" autocomplete="off">
     <label class="field" for="description">Or paste the lines under Description</label>
     <textarea id="description" name="description" autocomplete="off" placeholder="Sealing compound - TIN&#10;Anti Seize Compound - 500g&#10;PVA wood adhesive - 750g">{{ description }}</textarea>
     <div id="local-preview"><img alt="Selected document"><p></p></div>
     <div class="row">
       <label class="drop">
-        <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.bmp,.heic,.heif">
+        <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,.webp,.tif,.tiff,.bmp,.heic,.heif,image/*">
         <span>Upload invoice</span>
         <small>PDF or image</small>
       </label>
+      <button type="button" class="camera" id="open-camera"><span>Take photo</span><small>Phone camera</small></button>
+      <input id="camera-input" type="file" name="camera" accept="image/*" capture="environment" hidden>
       <button type="submit">Assign HS codes</button>
     </div>
-    <p class="hint">A handwritten " repeats the code above. That code is checked against the classification.</p>
+    <div id="camera-panel" hidden>
+      <video id="camera-video" autoplay playsinline muted></video>
+      <div class="camera-actions">
+        <button type="button" id="camera-close">Close</button>
+        <button type="button" id="camera-shutter">Use this photo</button>
+      </div>
+    </div>
+    <p class="hint">Take a photo with the phone camera, or upload a file. A handwritten " repeats the code above.</p>
   </form>
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
   {% if rows or preview %}
@@ -309,24 +332,94 @@ PAGE = """<!DOCTYPE html>
   const localPreview = document.getElementById("local-preview");
   const localImage = localPreview.querySelector("img");
   const localCaption = localPreview.querySelector("p");
+  const classifyForm = document.getElementById("classify-form");
+  const cameraInput = document.getElementById("camera-input");
+  const openCamera = document.getElementById("open-camera");
+  const cameraPanel = document.getElementById("camera-panel");
+  const cameraVideo = document.getElementById("camera-video");
+  const cameraShutter = document.getElementById("camera-shutter");
+  const cameraClose = document.getElementById("camera-close");
+  let cameraStream = null;
+  let useNativeCamera = !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+  function showPreview(file) {
+    if (!file) {
+      localPreview.classList.remove("visible");
+      return;
+    }
+    localCaption.textContent = file.name || "Photo";
+    if (file.type.startsWith("image/")) {
+      localImage.src = URL.createObjectURL(file);
+      localImage.hidden = false;
+    } else {
+      localImage.removeAttribute("src");
+      localImage.hidden = true;
+      localCaption.textContent = (file.name || "File") + " — preview appears after classification";
+    }
+    localPreview.classList.add("visible");
+  }
+
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((track) => track.stop());
+      cameraStream = null;
+    }
+    if (cameraVideo) cameraVideo.srcObject = null;
+    if (cameraPanel) cameraPanel.hidden = true;
+  }
+
   if (fileInput && fileLabel) {
     fileInput.addEventListener("change", () => {
       const file = fileInput.files && fileInput.files[0];
       fileLabel.textContent = file ? file.name : "PDF or image";
-      if (!file) {
-        localPreview.classList.remove("visible");
+      showPreview(file);
+    });
+  }
+
+  if (openCamera && cameraInput) {
+    openCamera.addEventListener("click", async () => {
+      if (useNativeCamera) {
+        cameraInput.click();
         return;
       }
-      localCaption.textContent = file.name;
-      if (file.type.startsWith("image/")) {
-        localImage.src = URL.createObjectURL(file);
-        localImage.hidden = false;
-      } else {
-        localImage.removeAttribute("src");
-        localImage.hidden = true;
-        localCaption.textContent = file.name + " — preview appears after classification";
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: "environment" } },
+        });
+        cameraVideo.srcObject = cameraStream;
+        cameraPanel.hidden = false;
+      } catch (error) {
+        useNativeCamera = true;
+        cameraInput.click();
       }
-      localPreview.classList.add("visible");
+    });
+    cameraInput.addEventListener("change", () => {
+      const file = cameraInput.files && cameraInput.files[0];
+      if (!file) return;
+      showPreview(file);
+      classifyForm.requestSubmit();
+    });
+  }
+
+  if (cameraClose) cameraClose.addEventListener("click", stopCamera);
+  if (cameraShutter) {
+    cameraShutter.addEventListener("click", () => {
+      if (!cameraVideo.videoWidth) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = cameraVideo.videoWidth;
+      canvas.height = cameraVideo.videoHeight;
+      canvas.getContext("2d").drawImage(cameraVideo, 0, 0);
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const photo = new File([blob], "camera.jpg", { type: "image/jpeg" });
+        const transfer = new DataTransfer();
+        transfer.items.add(photo);
+        cameraInput.files = transfer.files;
+        stopCamera();
+        showPreview(photo);
+        classifyForm.requestSubmit();
+      }, "image/jpeg", 0.92);
     });
   }
 </script>
@@ -380,6 +473,7 @@ def _reset_session() -> None:
 
 def _no_store(response: Response) -> Response:
     response.headers["Cache-Control"] = "no-store"
+    response.headers["Permissions-Policy"] = "camera=*"
     return response
 
 
@@ -431,10 +525,34 @@ def _classify_description(description: str, part_number: str, quantity: str) -> 
     return _with_headers(classify_extracted_lines(_classifier, items, "pasted descriptions"))
 
 
+def _chosen_upload():
+    """A phone photo is sent as `camera`. A chosen file is sent as `document`."""
+    camera = request.files.get("camera")
+    document = request.files.get("document")
+    if camera is not None and camera.filename:
+        return camera
+    if document is not None and document.filename:
+        return document
+    return None
+
+
 def _classify_upload(upload) -> tuple[list[dict], str]:
     suffix = Path(upload.filename or "").suffix.lower()
     if suffix not in SUPPORTED_EXTENSIONS:
-        raise ValueError("Upload a PDF or an image (.jpg, .png, .webp, .tif, .bmp, .heic).")
+        kind = (upload.mimetype or "").split(";")[0].strip().lower()
+        guessed = {
+            "image/jpeg": ".jpg",
+            "image/jpg": ".jpg",
+            "image/png": ".png",
+            "image/webp": ".webp",
+            "image/heic": ".heic",
+            "image/heif": ".heif",
+            "application/pdf": ".pdf",
+        }.get(kind)
+        if guessed is None:
+            raise ValueError("Upload a PDF or an image (.jpg, .png, .webp, .tif, .bmp, .heic).")
+        upload.filename = f"camera{guessed}"
+        suffix = guessed
     with tempfile.TemporaryDirectory() as folder:
         path = Path(folder) / Path(upload.filename).name
         upload.save(path)
@@ -470,7 +588,7 @@ def classify():
     description = request.form.get("description") or ""
     part_number = request.form.get("part_number") or ""
     quantity = request.form.get("quantity") or ""
-    upload = request.files.get("document")
+    upload = _chosen_upload()
     error = None
     rows: list[dict] = []
     source = ""

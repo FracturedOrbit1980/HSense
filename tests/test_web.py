@@ -20,6 +20,24 @@ def test_opening_the_page_clears_the_previous_classification():
     assert exported.data.strip() == b"[]"
 
 
+def test_phone_camera_photo_is_accepted_for_analysis():
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new("RGB", (40, 40), "white").save(buffer, format="JPEG")
+    client = app.test_client()
+    response = client.post(
+        "/",
+        data={"camera": (BytesIO(buffer.getvalue()), "camera.jpg")},
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200
+    assert b"choose a file" not in response.data
+    assert b"Take photo" in response.data
+
+
 def test_pdf_requires_an_authoriser_and_keeps_an_amended_code():
     client = app.test_client()
     client.post("/", data={"description": "Sealing compound - TIN"})
