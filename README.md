@@ -76,7 +76,9 @@ On that schedule, 3214.10, 3214.90, 3403.99.90, and 3506.10 are all **Free**. A 
 
 ## Run it in a browser
 
-GitHub stores the source. It does not host the classifier. On your computer:
+Open [HSense](https://fracturedorbit1980.github.io/HSense/). That GitHub Pages address loads the classifier.
+
+On your computer:
 
 ```bash
 pip install -r requirements.txt
