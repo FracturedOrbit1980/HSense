@@ -23,6 +23,7 @@ if str(ROOT) not in sys.path:
 
 from data.tariff_db import TariffDB, format_heading
 from engine.classifier import PUBLIC_FIELDS, WCOClassifier, classify_extracted_lines
+from engine.gri import FRAMEWORK
 from parsers.line_items import LineItem, _number, collect_descriptions, parse_document_text
 from parsers.universal_extractor import SUPPORTED_EXTENSIONS, extract_file
 from reports.classification_pdf import classification_pdf
@@ -156,7 +157,7 @@ PAGE = """<!DOCTYPE html>
 <div class="wrap">
   <div class="brand"><strong>HSENSE</strong><span>Schedule 1 · 28 August 2026</span></div>
   <h1>Check the description column.</h1>
-  <p class="lede">Upload the invoice. Lines under Description are classified, and a handwritten code is flagged when it does not match.</p>
+  <p class="lede">{{ framework }}, {{ schedule }}. Lines under Description are classified to an 8-digit line, and a handwritten code is verified against that line.</p>
   <form method="post" enctype="multipart/form-data">
     <label class="field" for="description">Or paste the lines under Description</label>
     <textarea id="description" name="description" placeholder="Sealing compound - TIN&#10;Anti Seize Compound - 500g&#10;PVA wood adhesive - 750g">{{ description }}</textarea>
@@ -295,6 +296,8 @@ def _view_context(**extra):
     extra.setdefault("quantity", "")
     extra.setdefault("error", None)
     extra.setdefault("document_name", _last_source)
+    extra["framework"] = FRAMEWORK
+    extra["schedule"] = _database.schedule_date
     extra["preview"] = bool(_preview_token and PREVIEW_PATH.exists())
     extra["preview_token"] = _preview_token
     extra["flagged"] = flagged

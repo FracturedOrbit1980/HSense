@@ -24,6 +24,8 @@ def test_pdf_lists_header_description_and_code():
     document = pymupdf.open(stream=payload, filetype="pdf")
     text = "\n".join(page.get_text() for page in document)
     document.close()
+    assert "Harmonized System" in text
+    assert "Schedule 1 Part 1" in text
     assert "Description" in text
     assert "Recommended" in text
     assert "Explanation" in text

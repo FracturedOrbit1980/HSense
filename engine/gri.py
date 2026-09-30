@@ -15,3 +15,10 @@ GRI_3A = (
     "is preferred to one with a general description."
 )
 GRI_6 = "GRI 6: GRI 1 to 5 apply at subheading level within the chosen heading."
+
+FRAMEWORK = (
+    "The reference framework used to evaluate, verify, and correct these HS codes "
+    "is the World Customs Organization (WCO) Harmonized System (HS) Nomenclature "
+    "and its local implementation, the SARS Tariff Book (Schedule 1 Part 1 of the "
+    "South African Customs and Excise Act)"
+)

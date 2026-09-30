@@ -1,6 +1,6 @@
 # HS document intake and SARS tariff classification
 
-This tool reads a commercial invoice from a digital PDF, a scanned PDF, or a photograph and classifies each product line to an 8-digit South African tariff code.
+This tool reads a commercial invoice from a digital PDF, a scanned PDF, or a photograph and classifies each product line to an 8-digit South African tariff code. Evaluation, verification, and correction use the World Customs Organization Harmonized System and its local implementation, the SARS Tariff Book (Schedule 1 Part 1 of the Customs and Excise Act).
 
 It is built for the ordinary-customs-duty schedule (SARS Schedule No. 1 Part 1), not a shortened prompt list. The legal wording of chapters 01 to 99 is stored in a local SQLite database and searched there. A small set of WCO heading rules handles the categories that invoices describe in trade language rather than in tariff language: anti-seize, mastics, and retail glues.
 
@@ -83,7 +83,7 @@ pip install -r requirements.txt
 python web.py
 ```
 
-Then open [HSense](http://127.0.0.1:43123). Upload an invoice or paste text. Each line shows the written code, the recommended code, and a short explanation. A handwritten `"` repeats the line above. A mismatch is marked Incorrect. A cosmetics code on these goods is marked Critical.
+Then open [HSense](http://127.0.0.1:43123). Upload an invoice or paste text. Each line shows the written code, the recommended code, and an explanation that cites the WCO General Rules and the Schedule 1 wording of both codes. A handwritten `"` repeats the line above. A mismatch is marked Incorrect. A cosmetics code on these goods is marked Critical.
 
 ## Commands
 

@@ -147,6 +147,13 @@ def test_leonardo_lines_and_ditto_display():
     )
     assert critical[0]["hs_code"] == "3403.99.90"
     assert critical[0]["flag"] == "critical"
+    assert "harmonized system" in critical[0]["explanation"].lower()
+    assert "schedule 1" in critical[0]["explanation"].lower()
+    assert "beauty" in critical[0]["explanation"].lower() or "skin" in critical[0]["explanation"].lower()
+    seal_note = rows[0]["explanation"].lower()
+    assert "gri 1" in seal_note
+    assert "caulking" in seal_note or "mastic" in seal_note
+    assert "3214.90.00" in rows[0]["explanation"]
 
 
 def test_common_goods_follow_heading_terms():

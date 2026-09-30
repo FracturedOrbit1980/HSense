@@ -11,6 +11,8 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
+from engine.gri import FRAMEWORK
+
 
 def classification_pdf(
     rows: list[dict],
@@ -42,7 +44,7 @@ def classification_pdf(
     story = [
         Paragraph("HSense tariff classification", title),
         Spacer(1, 4),
-        Paragraph(escape(f"SARS Schedule 1 Part 1, {schedule}"), sub),
+        Paragraph(escape(f"{FRAMEWORK}, {schedule}."), sub),
     ]
     if source:
         story.append(Paragraph(escape(f"Source: {source}"), sub))
