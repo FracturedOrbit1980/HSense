@@ -101,3 +101,4 @@ python main.py --rebuild-db --describe "Sealing compound - TIN"
 The tariff text is SARS Schedule No. 1 Part 1, ordinary customs duty, chapters 1 to 99, dated 28 August 2026, saved at `data/sources/schedule_1_part_1.pdf`. Chapter 77 is reserved and is not in the schedule. Declarable 6-digit subheadings that South Africa does not split further are stored as `XXXX.XX.00`.
 
 This is a classification aid. The reasoning cites the heading terms so a person can check the line before it is used on a declaration.
+# LUD-HS
