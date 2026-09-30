@@ -14,7 +14,7 @@ def test_opening_the_page_clears_the_previous_classification():
     assert b"2523.29.00" not in opened.data
     assert b"Portland cement 50 kg bag" not in opened.data
     assert "no-store" in opened.headers.get("Cache-Control", "")
-    assert b'class="watermark"' in opened.data
+    assert b'class="watermark"' not in opened.data
 
     exported = client.get("/export.json")
     assert exported.status_code == 200

@@ -69,24 +69,8 @@ PAGE = """<!DOCTYPE html>
   }
   .landing {
     position: relative;
-    min-height: 72vh;
-    display: flex;
-    align-items: flex-end;
-    overflow: hidden;
     color: var(--ink);
-    background:
-      linear-gradient(180deg, rgba(231, 238, 246, 0.2) 0%, rgba(231, 238, 246, 0.92) 78%),
-      #e7eef6;
-  }
-  .watermark {
-    position: absolute;
-    left: 50%;
-    top: 42%;
-    width: min(104vw, 1180px);
-    transform: translate(-50%, -50%);
-    opacity: 0.2;
-    pointer-events: none;
-    user-select: none;
+    background: #e7eef6;
   }
   .landing-inner {
     position: relative;
@@ -240,15 +224,12 @@ PAGE = """<!DOCTYPE html>
     .row button[type="submit"], .author-row .pdf { margin-left: 0; }
     .bar { align-items: flex-start; flex-direction: column; }
     .camera-actions button { width: auto; }
-    .landing { min-height: 58vh; }
-    .watermark { width: min(140vw, 760px); top: 38%; }
     .plate img { width: 150px; }
   }
 </style>
 </head>
 <body>
 <header class="landing">
-  <img class="watermark" src="/static/lud-logo.png" alt="">
   <div class="landing-inner">
     <div class="brand-row">
       <a class="plate" href="https://www.lud.co.za/" target="_blank" rel="noopener">
