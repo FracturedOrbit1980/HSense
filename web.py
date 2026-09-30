@@ -10,9 +10,11 @@ from __future__ import annotations
 import csv
 import io
 import json
+import secrets
 import sys
 import tempfile
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import Flask, Response, render_template_string, request, send_file
@@ -21,7 +23,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from data.tariff_db import TariffDB, format_heading
+from data.tariff_db import TariffDB, format_code, format_heading
 from engine.classifier import PUBLIC_FIELDS, WCOClassifier, classify_extracted_lines
 from engine.gri import FRAMEWORK
 from parsers.line_items import LineItem, _number, collect_descriptions, parse_document_text
@@ -189,6 +191,16 @@ PAGE = """<!DOCTYPE html>
   .pair em { font-style: normal; color: var(--muted); font-family: inherit; font-size: 0.82rem; font-weight: 600; }
   .why { margin: 10px 0 0; color: #262626; font-size: 0.92rem; }
   @media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
+  .code-input {
+    width: 100%; max-width: 220px; font-family: ui-monospace, Consolas, monospace;
+    font-size: 1rem; border: 1px solid #8ea4c4; border-radius: 10px; padding: 8px 10px; color: var(--ink); background: white;
+  }
+  .author-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; padding: 4px 18px 16px; }
+  .author-row label { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .author-row select {
+    display: block; margin-top: 6px; min-width: 180px; border: 1px solid #8ea4c4; border-radius: 10px;
+    padding: 10px 12px; font: inherit; background: white; color: var(--ink);
+  }
   .quiet { margin: 0; padding: 4px 18px 16px; color: var(--muted); font-size: 0.88rem; }
   .quiet a { color: var(--accent-dark); }
   .sheet { padding: 12px; position: sticky; top: 16px; }
@@ -247,13 +259,12 @@ PAGE = """<!DOCTYPE html>
     </figure>
     {% endif %}
     {% if rows %}
-    <section class="results">
+    <form class="results" method="post" action="/export.pdf">
       <div class="bar">
         <div>
           <h2>{{ rows|length }} description{{ "s" if rows|length != 1 else "" }}</h2>
           <p>{% if flagged %}{{ flagged }} handwritten code{{ "s" if flagged != 1 else "" }} to check.{% else %}Handwritten codes match, or none were read.{% endif %}</p>
         </div>
-        <a class="pdf" href="/export.pdf">Download PDF</a>
       </div>
       {% for row in rows %}
       {% set tone = 'critical' if row.flag == 'critical' else ('bad' if row.flag == 'incorrect' else ('ok' if row.flag == 'ok' else '')) %}
@@ -270,15 +281,24 @@ PAGE = """<!DOCTYPE html>
         </header>
         <div class="pair">
           <div>
-            <span>Recommended</span>
-            <strong>{{ row.recommended_label or row.hs_code or "—" }}</strong>
+            <span>HS code</span>
+            <input class="code-input" name="hs_{{ row.line_number }}" value="{{ row.hs_code or '' }}" autocomplete="off" aria-label="HS code for {{ row.description }}">
           </div>
         </div>
         {% if row.explanation %}<p class="why">{{ row.explanation }}</p>{% endif %}
       </article>
       {% endfor %}
+      <div class="author-row">
+        <label>Authorise
+          <select name="authoriser" required>
+            <option value="">Select name</option>
+            {% for name in authorisers %}<option>{{ name }}</option>{% endfor %}
+          </select>
+        </label>
+        <button class="pdf" type="submit">Download PDF</button>
+      </div>
       <p class="quiet"><a href="/export.json">JSON</a> · <a href="/export.csv">CSV</a></p>
-    </section>
+    </form>
     {% endif %}
   </div>
   {% endif %}
@@ -314,9 +334,12 @@ PAGE = """<!DOCTYPE html>
 </html>
 """
 
+AUTHORISERS = ("Christie", "Ronel", "Nelly", "Thabang")
+
 _last_rows: list[dict] = []
 _last_source = ""
 _preview_token = ""
+_seals: dict[str, dict] = {}
 
 
 def _save_preview(path: Path) -> None:
@@ -369,6 +392,7 @@ def _view_context(**extra):
     extra.setdefault("quantity", "")
     extra.setdefault("error", None)
     extra.setdefault("document_name", _last_source)
+    extra["authorisers"] = AUTHORISERS
     extra["framework"] = FRAMEWORK
     extra["schedule"] = _database.schedule_date
     extra["preview"] = bool(_preview_token and PREVIEW_PATH.exists())
@@ -478,18 +502,102 @@ def classify():
     )))
 
 
-@app.get("/export.pdf")
-def export_pdf():
+def _pdf_response(rows: list[dict], author: str) -> Response:
+    checked_at = datetime.now(timezone.utc).strftime("%d %B %Y, %H:%M UTC")
+    seal = secrets.token_urlsafe(9)
+    _seals[seal] = {
+        "author": author,
+        "checked_at": checked_at,
+        "source": _last_source,
+        "lines": [
+            {
+                "description": row.get("description") or "",
+                "hs_code": row.get("hs_code") or "",
+                "flag": row.get("flag") or "",
+                "amended": bool(row.get("amended")),
+            }
+            for row in rows
+        ],
+    }
     payload = classification_pdf(
-        _last_rows,
+        rows,
         schedule=_database.schedule_date,
         source=_last_source,
+        author=author,
+        checked_at=checked_at,
+        verify_url=request.host_url.rstrip("/") + "/verify/" + seal,
     )
     return Response(
         payload,
         mimetype="application/pdf",
         headers={"Content-Disposition": "attachment; filename=hsense.pdf"},
     )
+
+
+def _amended_rows() -> tuple[list[dict] | None, str | None]:
+    author = (request.form.get("authoriser") or "").strip()
+    if author not in AUTHORISERS:
+        return None, "Select Christie, Ronel, Nelly, or Thabang to authorise the PDF."
+    if not _last_rows:
+        return None, "Classify the descriptions before downloading the PDF."
+    prepared: list[dict] = []
+    for row in _last_rows:
+        raw = request.form.get(f"hs_{row.get('line_number')}") or row.get("hs_code") or ""
+        formatted = format_code(raw)
+        if formatted is None:
+            return None, f"Enter an 8-digit HS code for {row.get('description') or 'each line'}."
+        updated = dict(row)
+        updated["amended"] = formatted != (row.get("hs_code") or "")
+        updated["hs_code"] = formatted
+        updated["recommended_label"] = formatted
+        line = _database.get(formatted)
+        if line is not None:
+            updated["duty_rate_general"] = line.duty_general
+        prepared.append(updated)
+    return prepared, None
+
+
+@app.post("/export.pdf")
+def export_pdf():
+    rows, error = _amended_rows()
+    if error or rows is None:
+        return _no_store(app.make_response(render_template_string(
+            PAGE,
+            **_view_context(
+                rows=_last_rows,
+                error=error,
+                document_name=_last_source,
+            ),
+        )))
+    return _pdf_response(rows, (request.form.get("authoriser") or "").strip())
+
+
+@app.get("/verify/<seal>")
+def verify(seal: str):
+    record = _seals.get(seal)
+    if record is None:
+        body = "<h1>Not authenticated</h1><p>This seal is not on file.</p>"
+        status = 404
+    else:
+        lines = "".join(
+            f"<li>{line['description']} — {line['hs_code']}</li>" for line in record["lines"]
+        )
+        body = (
+            f"<p class=\"kicker\">Authenticated</p>"
+            f"<h1>Final check: {record['author']}</h1>"
+            f"<p>{record['checked_at']}</p><ul>{lines}</ul>"
+        )
+        status = 200
+    page = f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HSense authentication</title>
+<style>
+  body {{ margin: 0; font: 16px/1.5 "Segoe UI", sans-serif; background: #e7eef6; color: #0a0a0a; }}
+  main {{ max-width: 640px; margin: 32px auto; background: white; border-radius: 18px; padding: 24px; }}
+  .kicker {{ letter-spacing: 0.14em; text-transform: uppercase; color: #033591; font-weight: 700; font-size: 0.78rem; }}
+  h1 {{ margin: 6px 0; color: #022669; }}
+</style></head><body><main>{body}</main></body></html>"""
+    return Response(page, status=status, mimetype="text/html")
 
 
 @app.get("/export.json")

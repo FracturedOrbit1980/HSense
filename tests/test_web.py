@@ -18,3 +18,23 @@ def test_opening_the_page_clears_the_previous_classification():
     exported = client.get("/export.json")
     assert exported.status_code == 200
     assert exported.data.strip() == b"[]"
+
+
+def test_pdf_requires_an_authoriser_and_keeps_an_amended_code():
+    client = app.test_client()
+    client.post("/", data={"description": "Sealing compound - TIN"})
+    refused = client.post("/export.pdf", data={"authoriser": "", "hs_1": "3214.10.00"})
+    assert refused.status_code == 200
+    assert b"Select Christie" in refused.data
+
+    pdf = client.post("/export.pdf", data={"authoriser": "Nelly", "hs_1": "3403.99.90"})
+    assert pdf.status_code == 200
+    assert pdf.mimetype == "application/pdf"
+    import pymupdf
+
+    document = pymupdf.open(stream=pdf.data, filetype="pdf")
+    text = document[0].get_text()
+    document.close()
+    assert "Final check: Nelly" in text
+    assert "3403.99.90" in text
+    assert "Amended" in text
