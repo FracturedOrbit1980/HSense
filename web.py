@@ -67,46 +67,47 @@ PAGE = """<!DOCTYPE html>
     color: var(--ink);
     background: var(--bg);
   }
-  .mast {
+  .landing {
     position: relative;
-    min-height: 248px;
-    color: white;
-    background: #022669 url("/static/lud-stage.jpg") center right / cover no-repeat;
+    min-height: 72vh;
+    display: flex;
+    align-items: flex-end;
     overflow: hidden;
+    color: var(--ink);
+    background:
+      linear-gradient(180deg, rgba(231, 238, 246, 0.2) 0%, rgba(231, 238, 246, 0.92) 78%),
+      #e7eef6;
   }
-  .mast::before {
-    content: "";
+  .watermark {
     position: absolute;
-    inset: 0;
-    background: linear-gradient(100deg, rgba(2, 38, 105, 0.88) 0%, rgba(2, 38, 105, 0.42) 48%, rgba(3, 53, 145, 0.12) 100%);
+    left: 50%;
+    top: 42%;
+    width: min(104vw, 1180px);
+    transform: translate(-50%, -50%);
+    opacity: 0.2;
+    pointer-events: none;
+    user-select: none;
   }
-  .mast-inner {
+  .landing-inner {
     position: relative;
     z-index: 1;
-    max-width: 1120px;
+    width: min(1120px, 100%);
     margin: 0 auto;
-    padding: 36px 20px 40px;
-    display: flex;
-    align-items: center;
-    gap: 28px;
+    padding: 36px 20px 28px;
   }
+  .brand-row { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
   .plate {
     flex: 0 0 auto;
     background: #fff;
-    border-radius: 18px;
-    padding: 14px 16px 10px;
-    transform: perspective(900px) rotateY(-10deg) rotateX(5deg);
-    transform-style: preserve-3d;
-    box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.9) inset,
-      0 22px 36px rgba(0, 0, 0, 0.38),
-      0 6px 0 rgba(255, 255, 255, 0.18);
+    border-radius: 16px;
+    padding: 10px 12px 8px;
+    box-shadow: 0 10px 24px rgba(2, 38, 105, 0.16);
   }
-  .plate img { display: block; width: 210px; height: auto; }
-  .kicker { margin: 0 0 6px; letter-spacing: 0.16em; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
-  h1 { margin: 0; font-size: clamp(1.7rem, 3vw, 2.35rem); line-height: 1.08; letter-spacing: -0.03em; font-weight: 700; }
-  .when { margin: 8px 0 0; color: rgba(255, 255, 255, 0.82); font-size: 0.92rem; }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 20px 64px; }
+  .plate img { display: block; width: 168px; height: auto; }
+  .kicker { margin: 0 0 6px; letter-spacing: 0.16em; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--accent); }
+  h1 { margin: 0; font-size: clamp(2rem, 4vw, 3.1rem); line-height: 1.05; letter-spacing: -0.03em; font-weight: 700; max-width: 16ch; }
+  .when { margin: 10px 0 0; color: var(--muted); font-size: 1rem; }
+  .wrap { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 8px 20px 64px; }
   .lede { margin: 0 0 16px; max-width: 46rem; color: var(--muted); font-size: 0.98rem; }
   form, .results, .sheet {
     background: var(--card);
@@ -129,13 +130,20 @@ PAGE = """<!DOCTYPE html>
   textarea:focus { outline: 2px solid var(--accent); background: white; }
   .row { display: flex; gap: 12px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
   .drop {
-    display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px;
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; min-height: 52px; padding: 8px 18px; text-align: center;
     border: 1px dashed #8ea4c4; border-radius: 999px; color: var(--ink); cursor: pointer; background: white;
   }
   .drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .drop span, button.camera span { display: block; line-height: 1.15; }
+  .drop small, button.camera small { display: block; line-height: 1.15; font-size: 0.75rem; }
   .drop small { color: var(--muted); }
   button.camera {
     margin-left: 0;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 52px;
+    padding: 8px 18px;
     color: white;
     background: #033591;
     box-shadow: 0 4px 0 #022669, 0 10px 16px rgba(2, 38, 105, 0.25);
@@ -148,15 +156,18 @@ PAGE = """<!DOCTYPE html>
   .camera-actions button { margin-left: 0; flex: 1; justify-content: center; }
   #camera-close { background: transparent; color: white; box-shadow: none; border: 1px solid rgba(255, 255, 255, 0.45); }
   button, .pdf {
-    border: 0; border-radius: 999px; padding: 11px 18px; font: inherit; font-weight: 600;
-    cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
+    border: 0; border-radius: 999px; min-height: 46px; padding: 0 20px;
+    font: inherit; font-weight: 600; line-height: 1.15; text-align: center;
+    cursor: pointer; text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center;
   }
   button {
-    margin-left: auto;
+    margin: 0;
     color: white;
     background: linear-gradient(#0a4cb8, var(--accent));
     box-shadow: 0 4px 0 var(--accent-dark), 0 12px 20px rgba(2, 38, 105, 0.28);
   }
+  .row button[type="submit"], .author-row .pdf { margin-left: auto; }
   button:hover { transform: translateY(1px); box-shadow: 0 3px 0 var(--accent-dark), 0 8px 16px rgba(2, 38, 105, 0.24); }
   button:active { transform: translateY(4px); box-shadow: 0 0 0 var(--accent-dark); }
   .pdf {
@@ -225,26 +236,28 @@ PAGE = """<!DOCTYPE html>
   @media (max-width: 860px) {
     .workspace { grid-template-columns: 1fr; }
     .sheet { position: static; }
-    button { margin-left: 0; width: 100%; justify-content: center; }
+    button, .drop { margin-left: 0; width: 100%; justify-content: center; }
+    .row button[type="submit"], .author-row .pdf { margin-left: 0; }
     .bar { align-items: flex-start; flex-direction: column; }
     .camera-actions button { width: auto; }
-    .mast-inner { flex-direction: column; align-items: flex-start; }
-    .plate { transform: none; }
-    .plate img { width: 180px; }
+    .landing { min-height: 58vh; }
+    .watermark { width: min(140vw, 760px); top: 38%; }
+    .plate img { width: 150px; }
   }
 </style>
 </head>
 <body>
-<header class="mast">
-  <div class="mast-inner">
-    <a class="plate" href="https://www.lud.co.za/" target="_blank" rel="noopener">
-      <img src="/static/lud-logo.png" alt="LUD Logistics" width="210" height="92">
-    </a>
-    <div>
-      <p class="kicker">HSense</p>
-      <h1>Check the description column.</h1>
-      <p class="when">Schedule 1 · {{ schedule }}</p>
+<header class="landing">
+  <img class="watermark" src="/static/lud-logo.png" alt="">
+  <div class="landing-inner">
+    <div class="brand-row">
+      <a class="plate" href="https://www.lud.co.za/" target="_blank" rel="noopener">
+        <img src="/static/lud-logo.png" alt="LUD Logistics" width="168" height="74">
+      </a>
     </div>
+    <p class="kicker">HSense</p>
+    <h1>Check the description column.</h1>
+    <p class="when">Schedule 1 · {{ schedule }}</p>
   </div>
 </header>
 <div class="wrap">
